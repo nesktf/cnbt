@@ -3,8 +3,12 @@
 
 #include "../include/cnbt/cnbt.h"
 
-#include <assert.h>
 #include <string.h>
+
+#ifndef CNBT__ASSERT
+#include <assert.h>
+#define CNBT__ASSERT assert
+#endif
 
 #ifndef CNBT__MALLOC
 #define CNBT__MALLOC malloc
@@ -27,19 +31,17 @@ typedef struct CNBT__Data {
     int64_t as_int;
     float as_float;
     double as_double;
-    char* as_blob;
+    char* as_str;
+    int8_t* as_blob;
     CNBT_Tag* as_list;
-    CNBT_CompEntry* as_compound;
+    CNBT_KeyTag* as_compound;
   };
 
-  char* name;
   uint32_t tag;
   uint32_t size;
 } CNBT__Data;
 
-CNBT_Status cnbt__init_tag(CNBT_Tag* tag, const char* name);
 void cnbt__free_list(CNBT_Tag* list);
-void cnbt__free_compound(CNBT_Tag* comp);
-void cnbt__free_blob(char* blob);
+void cnbt__free_compound(CNBT_KeyTag* comp);
 
 #endif // CNBT_CORE_H_
