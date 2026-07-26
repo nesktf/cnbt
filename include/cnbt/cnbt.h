@@ -1,8 +1,8 @@
 #ifndef CNBT_H_
 #define CNBT_H_
 
+#include <stdalign.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #define CNBT_TAG_SIZE        16
@@ -38,7 +38,7 @@ typedef enum CNBT_Type {
 } CNBT_Type;
 
 typedef struct CNBT_Tag {
-  uint8_t data[CNBT_TAG_SIZE];
+  alignas(void*) uint8_t data[CNBT_TAG_SIZE];
 } CNBT_Tag;
 
 typedef struct CNBT_KeyTag {
@@ -56,6 +56,18 @@ typedef CNBT_Tag CNBT_String;
 typedef CNBT_Tag CNBT_List;
 typedef CNBT_Tag CNBT_ByteArray;
 typedef CNBT_Tag CNBT_Compound;
+
+typedef size_t (*PFN_cnbt_read_func)(void* buff, size_t sz, size_t nmemb, void* src);
+typedef size_t (*PFN_cnbt_write_func)(const void* buff, size_t sz, size_t nmemb, void* src);
+typedef int (*PFN_cnbt_seek_func)(void* src, long offset, int origin);
+typedef long (*PFN_cnbt_tell_func)(void* src);
+
+typedef struct CNBT_IoCallbacks {
+  PFN_cnbt_read_func read;
+  PFN_cnbt_write_func write;
+  PFN_cnbt_seek_func seek;
+  PFN_cnbt_tell_func tell;
+} CNBT_IoCallbacks;
 
 CNBT_API const char* cnbt_tag_name(CNBT_Type type);
 
@@ -101,9 +113,10 @@ CNBT_API CNBT_Status cnbt_make_compound(CNBT_Compound* comp);
 CNBT_API CNBT_KeyTag* cnbt_comp_put_tag(CNBT_Compound* comp, const char* key, CNBT_Tag tag);
 CNBT_API CNBT_KeyTag* cnbt_comp_get(const CNBT_Compound* comp, const char* key);
 
-CNBT_API CNBT_Status cnbt_write(FILE* f, const CNBT_Compound* comp);
-CNBT_API CNBT_Status cnbt_write_pretty(FILE* f, const CNBT_Compound* comp);
-CNBT_API CNBT_Status cnbt_read(FILE* f, CNBT_Compound* comp);
+CNBT_API CNBT_Status cnbt_write(const CNBT_Tag* tag, void* src, const CNBT_IoCallbacks* cbs);
+CNBT_API CNBT_Status cnbt_write_pretty(const CNBT_Tag* tag, void* src,
+                                       const CNBT_IoCallbacks* cbs);
+CNBT_API CNBT_Status cnbt_read(CNBT_Tag* tag, void* src, const CNBT_IoCallbacks* cbs);
 
 #ifdef __cplusplus
 } // extern "C"

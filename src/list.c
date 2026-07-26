@@ -2,7 +2,7 @@
 
 #define STBDS_FREE(_ctx, _ptr)         CNBT__FREE(_ptr)
 #define STBDS_REALLOC(_ctx, _ptr, _sz) CNBT__REALLOC(_ptr, _sz)
-#define STBDS_ASSERT CNBT__ASSERT
+#define STBDS_ASSERT                   CNBT__ASSERT
 
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
@@ -18,7 +18,9 @@ CNBT_API CNBT_Status cnbt_make_list(CNBT_List* list) {
 }
 
 void cnbt__free_list(CNBT_Tag* list) {
-  CNBT__ASSERT(list);
+  if (!list) {
+    return;
+  }
   for (size_t i = 0; i < stbds_arrlenu(list); ++i) {
     cnbt_free(list + i);
   }
@@ -74,7 +76,9 @@ CNBT_API CNBT_Status cnbt_make_compound(CNBT_Compound* comp) {
 }
 
 void cnbt__free_compound(CNBT_KeyTag* comp) {
-  CNBT__ASSERT(comp);
+  if (!comp) {
+    return;
+  }
   for (size_t i = 0; i < stbds_shlenu(comp); ++i) {
     cnbt_free(&comp[i].value);
   }
@@ -89,7 +93,7 @@ CNBT_API CNBT_KeyTag* cnbt_comp_put_tag(CNBT_Compound* comp, const char* key, CN
     return NULL;
   }
   stbds_shput(CNBT__GET_DATA(comp)->as_compound, key, tag);
-  return shgetp(CNBT__GET_DATA(comp)->as_compound, key);
+  return shgetp_null(CNBT__GET_DATA(comp)->as_compound, key);
 }
 
 CNBT_API CNBT_KeyTag* cnbt_comp_get(const CNBT_Compound* comp, const char* key) {
