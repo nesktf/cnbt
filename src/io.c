@@ -24,6 +24,8 @@ static const char list_chars[] = {'[', ']', '\n', ',', ' '};
   cbs->write(list_chars + (off * sizeof(list_chars[0])), sizeof(list_chars[0]), \
              n * sizeof(list_chars[0]), src)
 
+static const char endstr[] = "END";
+
 static void write_indent(void* src, const CNBT_IoCallbacks* cbs, int n) {
   for (int i = 0; i < n; ++i) {
     cbs->write(indent, sizeof(indent[0]), sizeof(indent) - 1, src);
@@ -34,6 +36,7 @@ static void write_pretty_tag(PrettyCtx* ctx, const CNBT_Tag* tag, void* src,
                              const CNBT_IoCallbacks* cbs) {
   const uint8_t type = CNBT__GET_DATA(tag)->tag;
   if (type == CNBT_TYPE_END) {
+    cbs->write(endstr, sizeof(endstr[0]), sizeof(endstr)-1, src);
     return;
   }
 
@@ -57,20 +60,46 @@ static void write_pretty_tag(PrettyCtx* ctx, const CNBT_Tag* tag, void* src,
     return;
   }
 
+  if (type == CNBT_TYPE_STRING) {
+    const char ch = '"';
+    cbs->write(&ch, sizeof(ch), 1, src);
+    cbs->write(CNBT__GET_DATA(tag)->as_str, sizeof(ch), CNBT__GET_DATA(tag)->size, src);
+    cbs->write(&ch, sizeof(ch), 1, src);
+    return;
+  }
+
+  if (type == CNBT_TYPE_BYTE_ARRAY) {
+    const size_t sz = CNBT__GET_DATA(tag)->size;
+    if (sz == 0) {
+      LIST_WRITECHAR(0, 3); // "[]\n"
+      return;
+    }
+    LIST_WRITECHAR(0, 1); // "["
+    for (size_t i = 0; i < sz; ++i) {
+      c = snprintf(ctx->buff, sizeof(ctx->buff), "0x%02X",
+                   (uint8_t)CNBT__GET_DATA(tag)->as_blob[i]);
+      cbs->write(ctx->buff, sizeof(ctx->buff[0]), c, src);
+      if (i < sz - 1) {
+        LIST_WRITECHAR(3, 2);
+      }
+    }
+    LIST_WRITECHAR(1, 1); // "]"
+  }
+
   if (type == CNBT_TYPE_LIST) {
     const size_t sz = stbds_arrlenu(CNBT__GET_DATA(tag)->as_list);
     if (sz == 0) {
       LIST_WRITECHAR(0, 3); // "[]\n"
       return;
     }
-    LIST_WRITECHAR(0, 1);
+    LIST_WRITECHAR(0, 1); // "["
     for (size_t i = 0; i < sz; ++i) {
       write_pretty_tag(ctx, CNBT__GET_DATA(tag)->as_list + i, src, cbs);
       if (i < sz - 1) {
         LIST_WRITECHAR(3, 2);
       }
     }
-    LIST_WRITECHAR(1, 1);
+    LIST_WRITECHAR(1, 1); // "]"
   }
 
   if (type == CNBT_TYPE_COMPOUND) {
