@@ -36,7 +36,7 @@ CNBT_API CNBT_Tag* cnbt_list_put_tag(CNBT_List* list, CNBT_Tag tag) {
   return CNBT__GET_DATA(list)->as_list + stbds_arrlen(CNBT__GET_DATA(list)->as_list) - 1;
 }
 
-CNBT_API size_t cnbt_list_size(CNBT_List* list) {
+CNBT_API size_t cnbt_list_len(const CNBT_List* list) {
   return list ? CNBT__GET_DATA(list)->tag == CNBT_TYPE_LIST
                 ? stbds_arrlen(CNBT__GET_DATA(list)->as_list)
                 : 0

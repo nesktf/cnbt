@@ -123,6 +123,8 @@ static CNBT_Status cnbt__init_str(CNBT_String* tag, const char* data, size_t len
   }
 
   memset(tag, 0x00, sizeof(*tag));
+  memcpy(ptr, data, len);
+  ptr[len] = '\0';
   CNBT__GET_DATA(tag)->tag = CNBT_TYPE_STRING;
   CNBT__GET_DATA(tag)->as_str= ptr;
   CNBT__GET_DATA(tag)->size = (uint32_t)len;
@@ -143,7 +145,7 @@ CNBT_API CNBT_Status cnbt_make_strn(CNBT_String* tag, const char* str, size_t n)
   return cnbt__init_str(tag, str, n);
 }
 
-CNBT_API char* cnbt_get_string(const CNBT_String* tag) {
+CNBT_API char* cnbt_get_str(const CNBT_String* tag) {
   return tag ? CNBT__GET_DATA(tag)->tag == CNBT_TYPE_STRING ? CNBT__GET_DATA(tag)->as_str: NULL
              : NULL;
 }
@@ -162,6 +164,7 @@ CNBT_API CNBT_Status cnbt_make_byte_array(CNBT_ByteArray* arr, const int8_t* dat
     return CNBT_ALLOC_FAILED;
   }
 
+  memcpy(blob, data, n);
   CNBT__GET_DATA(arr)->tag = CNBT_TYPE_BYTE_ARRAY;
   CNBT__GET_DATA(arr)->as_blob = blob;
   CNBT__GET_DATA(arr)->size = (uint32_t)n;

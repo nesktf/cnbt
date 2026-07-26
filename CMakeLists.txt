@@ -8,7 +8,7 @@ set(CNBT_VER_REV 1)
 set(CNBT_VER "${CNBT_VER_MAJ}.${CNBT_VER_MIN}.${CNBT_VER_REV}")
 
 option(CNBT_SHARED_BUILD "Shared object build" OFF)
-#option(CNBT_BUILD_TESTS "Build tests" OFF)
+option(CNBT_BUILD_TESTS "Build tests" OFF)
 
 set(CNBT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CNBT_SOURCE_DIR "${CNBT_DIR}/src")
@@ -21,7 +21,7 @@ else()
 endif()
 
 message(STATUS "cnbt: Setting up version ${CNBT_VER_STR}")
-project(chimatools VERSION ${CNBT_VER} LANGUAGES C)
+project(cnbt VERSION ${CNBT_VER} LANGUAGES C)
 
 file(GLOB_RECURSE CNBT_SOURCE_FILES "${CNBT_SOURCE_DIR}/*.c")
 set(CNBT_INCLUDE_FILES "${CNBT_INCLUDE_DIR}/cnbt/cnbt.h")
@@ -54,7 +54,7 @@ install(EXPORT ${PROJECT_NAME}-config
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/${PROJECT_NAME}/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
-#if (CNBT_BUILD_EXAMPLES)
-#  message(STATUS "cnbt: Building tests")
-#  add_subdirectory("${CNBT_DIR}/test")
-#endif()
+      if (CNBT_BUILD_TESTS)
+  message(STATUS "cnbt: Building tests")
+  add_subdirectory("${CNBT_DIR}/test")
+endif()

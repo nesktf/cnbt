@@ -1,0 +1,6 @@
+#pragma once
+
+#include <munit.h>
+
+MunitResult test_int_init(const MunitParameter* params, void* data);
+MunitResult test_list_init(const MunitParameter* params, void* data);
