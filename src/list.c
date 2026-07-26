@@ -99,5 +99,5 @@ CNBT_API CNBT_KeyTag* cnbt_comp_get(const CNBT_Compound* comp, const char* key) 
   if (CNBT__GET_DATA(comp)->tag != CNBT_TYPE_COMPOUND) {
     return NULL;
   }
-  return shgetp(CNBT__GET_DATA(comp)->as_compound, key);
+  return shgetp_null(CNBT__GET_DATA(comp)->as_compound, key);
 }

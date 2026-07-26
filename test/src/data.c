@@ -123,3 +123,36 @@ MunitResult test_list_init(const MunitParameter* params, void* data) {
   cnbt_free(&list);
   return MUNIT_OK;
 }
+
+MunitResult test_comp_init(const MunitParameter* params, void* data) {
+  (void)params;
+  (void)data;
+  CNBT_Status res;
+  CNBT_KeyTag* tag;
+
+  CNBT_Compound comp;
+  res = cnbt_make_compound(&comp);
+  munit_assert_true(res == CNBT_OK);
+  munit_assert_true(cnbt_get_type(&comp) == CNBT_TYPE_COMPOUND);
+
+  {
+    CNBT_Float float_tag;
+    cnbt_make_float(&float_tag, 1.f);
+    tag = cnbt_comp_put_tag(&comp, "my float", float_tag);
+    munit_assert_true(res == CNBT_OK);
+    munit_assert_ptr_not_null(tag);
+    munit_assert_string_equal(tag->key, "my float");
+    munit_assert_true(cnbt_get_float(&tag->value) == 1.f);
+  }
+
+  tag = cnbt_comp_get(&comp, "asddsa");
+  munit_assert_ptr_null(tag);
+
+  tag = cnbt_comp_get(&comp, "my float");
+  munit_assert_ptr_not_null(tag);
+  munit_assert_string_equal(tag->key, "my float");
+  munit_assert_true(cnbt_get_float(&tag->value) == 1.f);
+
+  cnbt_free(&comp);
+  return MUNIT_OK;
+}
