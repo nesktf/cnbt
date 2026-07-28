@@ -21,6 +21,8 @@ typedef enum CNBT_Status {
   CNBT_OK = 0,
   CNBT_INVALID_DATA,
   CNBT_ALLOC_FAILED,
+  CNBT_EOF,
+  CNBT_ZLIB_ERROR,
 } CNBT_Status;
 
 typedef enum CNBT_Type {
@@ -117,6 +119,15 @@ CNBT_API CNBT_Status cnbt_write(const CNBT_Tag* tag, void* src, const CNBT_IoCal
 CNBT_API CNBT_Status cnbt_write_pretty(const CNBT_Tag* tag, void* src,
                                        const CNBT_IoCallbacks* cbs);
 CNBT_API CNBT_Status cnbt_read(CNBT_Tag* tag, void* src, const CNBT_IoCallbacks* cbs);
+
+#ifdef CNBT_HAS_ZLIB
+typedef struct CNBT_ZlibCtx_T* CNBT_ZlibCtx;
+
+CNBT_API CNBT_Status cnbt_zlib_open(CNBT_ZlibCtx* ctx, void* src, const CNBT_IoCallbacks* cbs);
+CNBT_API void cnbt_zlib_close(CNBT_ZlibCtx ctx);
+CNBT_API size_t cnbt_zlib_read(void* buff, size_t sz, size_t nmemb, CNBT_ZlibCtx ctx);
+CNBT_API size_t cnbt_zlib_write(const void* buff, size_t sz, size_t nmemb, CNBT_ZlibCtx ctx);
+#endif
 
 #ifdef __cplusplus
 } // extern "C"
