@@ -5,6 +5,7 @@ static MunitTest tests[] = {
   {"/list-init", test_list_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
   {"/compound-init", test_comp_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
   {"/write-pretty", test_write_pretty, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
+  {"/read-basic", test_read_basic, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
   {NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
 };
 

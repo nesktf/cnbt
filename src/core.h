@@ -26,6 +26,8 @@
 
 #define CNBT__GET_DATA(_tag) ((CNBT__Data*)(_tag))
 
+#define CNBT_TYPE_NULL -1
+
 typedef struct CNBT__Data {
   union {
     int64_t as_int;
@@ -43,5 +45,22 @@ typedef struct CNBT__Data {
 
 void cnbt__free_list(CNBT_Tag* list);
 void cnbt__free_compound(CNBT_KeyTag* comp);
+
+typedef struct CNBT__ReadCtx {
+  const CNBT_IoCallbacks* cbs;
+  void* src;
+} CNBT__ReadCtx;
+
+CNBT_Status cnbt__read_type(CNBT__ReadCtx* ctx, CNBT_Type* type);
+CNBT_Status cnbt__read_byte(CNBT__ReadCtx* ctx, int8_t* num);
+CNBT_Status cnbt__read_short(CNBT__ReadCtx* ctx, int16_t* num);
+CNBT_Status cnbt__read_int(CNBT__ReadCtx* ctx, int32_t* num);
+CNBT_Status cnbt__read_long(CNBT__ReadCtx* ctx, int64_t* num);
+CNBT_Status cnbt__read_float(CNBT__ReadCtx* ctx, float* num);
+CNBT_Status cnbt__read_double(CNBT__ReadCtx* ctx, double* num);
+CNBT_Status cnbt__read_string(CNBT__ReadCtx* ctx, char** data, uint32_t* len);
+CNBT_Status cnbt__read_blob(CNBT__ReadCtx* ctx, int8_t** data, uint32_t* len);
+CNBT_Status cnbt__read_list(CNBT__ReadCtx* ctx, CNBT_Tag** data, uint32_t* len);
+CNBT_Status cnbt__read_compound(CNBT__ReadCtx* ctx, CNBT_KeyTag** data, uint32_t* len);
 
 #endif // CNBT_CORE_H_

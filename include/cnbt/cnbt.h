@@ -5,9 +5,23 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifdef CNBT_INCLUDE_STDIO
+#include <stdio.h>
+#endif
+
+#ifdef __cplusplus
+#define CNBT_INLINE static inline
+#else
+#define CNBT_INLINE static
+#endif
+
 #define CNBT_TAG_SIZE        16
 #define CNBT_MAX_STRING_SIZE 0xFFFF
 #define CNBT_MAX_LIST_SIZE   0x7FFFFFFF
+
+#define CNBT_SEEK_SET 0
+#define CNBT_SEEK_CUR 1
+#define CNBT_SEEK_END 2
 
 #ifndef CNBT_API
 #define CNBT_API
@@ -115,18 +129,38 @@ CNBT_API CNBT_Status cnbt_make_compound(CNBT_Compound* comp);
 CNBT_API CNBT_KeyTag* cnbt_comp_put_tag(CNBT_Compound* comp, const char* key, CNBT_Tag tag);
 CNBT_API CNBT_KeyTag* cnbt_comp_get(const CNBT_Compound* comp, const char* key);
 
+CNBT_API CNBT_Status cnbt_read(CNBT_Tag* tag, void* src, const CNBT_IoCallbacks* cbs);
+
 CNBT_API CNBT_Status cnbt_write(const CNBT_Tag* tag, void* src, const CNBT_IoCallbacks* cbs);
 CNBT_API CNBT_Status cnbt_write_pretty(const CNBT_Tag* tag, void* src,
                                        const CNBT_IoCallbacks* cbs);
-CNBT_API CNBT_Status cnbt_read(CNBT_Tag* tag, void* src, const CNBT_IoCallbacks* cbs);
+
+#ifdef CNBT_INCLUDE_STDIO
+CNBT_INLINE CNBT_IoCallbacks CNBT_FILE_IO = {
+  .read = (PFN_cnbt_read_func)fread,
+  .write = (PFN_cnbt_write_func)fwrite,
+  .seek = (PFN_cnbt_seek_func)fseek,
+  .tell = (PFN_cnbt_tell_func)ftell,
+};
+#endif
 
 #ifdef CNBT_HAS_ZLIB
-typedef struct CNBT_ZlibCtx_T* CNBT_ZlibCtx;
+typedef struct CNBT_ZStream_T* CNBT_ZStream;
+CNBT_API CNBT_Status cnbt_make_zstream(CNBT_ZStream* zstr, size_t buffsz, void* src,
+                                       const CNBT_IoCallbacks* cbs);
+CNBT_API void cnbt_free_zstream(CNBT_ZStream zstr);
 
-CNBT_API CNBT_Status cnbt_zlib_open(CNBT_ZlibCtx* ctx, void* src, const CNBT_IoCallbacks* cbs);
-CNBT_API void cnbt_zlib_close(CNBT_ZlibCtx ctx);
-CNBT_API size_t cnbt_zlib_read(void* buff, size_t sz, size_t nmemb, CNBT_ZlibCtx ctx);
-CNBT_API size_t cnbt_zlib_write(const void* buff, size_t sz, size_t nmemb, CNBT_ZlibCtx ctx);
+CNBT_API size_t cnbt_zread(void* buff, size_t sz, size_t nmemb, CNBT_ZStream zstr);
+CNBT_API size_t cnbt_zwrite(const void* buff, size_t sz, size_t nmemb, CNBT_ZStream zstr);
+CNBT_API int cnbt_zseek(CNBT_ZStream zstr, long offset, int origin);
+CNBT_API long cnbt_ztell(CNBT_ZStream zstr);
+
+CNBT_INLINE CNBT_IoCallbacks CNBT_ZSTREAM_IO = {
+  .read = (PFN_cnbt_read_func)cnbt_zread,
+  .write = (PFN_cnbt_write_func)cnbt_zwrite,
+  .seek = (PFN_cnbt_seek_func)cnbt_zseek,
+  .tell = (PFN_cnbt_tell_func)cnbt_ztell,
+};
 #endif
 
 #ifdef __cplusplus
