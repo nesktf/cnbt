@@ -2,6 +2,7 @@
 #define CNBT_CORE_H_
 
 #include "../include/cnbt/cnbt.h"
+#include "../include/cnbt/stream.h"
 
 #include <string.h>
 

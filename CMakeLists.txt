@@ -28,12 +28,13 @@ set(CNBT_SOURCES
   "${CNBT_SOURCE_DIR}/tag.c"
   "${CNBT_SOURCE_DIR}/list.c"
   "${CNBT_SOURCE_DIR}/io.c"
+  "${CNBT_SOURCE_DIR}/format.c"
 )
 set(CNBT_SOURCES_ZLIB
   "${CNBT_SOURCE_DIR}/zlib_io.c"
 )
+list(APPEND CNBT_INCLUDE ${CNBT_INCLUDE_DIR})
 set(CNBT_HEADERS "${CNBT_INCLUDE_DIR}/cnbt/cnbt.h")
-list(APPEND CNBT_INCLUDE ${CNBT_HEADERS})
 
 if(CNBT_ENABLE_ZLIB)
   find_package(ZLIB REQUIRED)
