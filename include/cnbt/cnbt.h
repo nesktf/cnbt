@@ -1,31 +1,43 @@
-#ifndef CNBT_H_
-#define CNBT_H_
+#ifndef CNBT_H
+#define CNBT_H
 
-#include <stdalign.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#define CNBT_TAG_SIZE        16
+#if defined CNBT_STATIC
+#define CNBT_API
+#elif defined _WIN32 || defined __CYGWIN__
+#if defined CNBT__INTERNAL
+#define CNBT_API __declspec(dllexport)
+#else
+#define CNBT_API __declspec(dllimport)
+#endif
+#elif defined CNBT__INTERNAL && defined __GNUC__
+#define CNBT_API __attribute__((visibility("default")))
+#else
+#define CNBT_API
+#endif
+
 #define CNBT_MAX_STRING_SIZE 0xFFFF
 #define CNBT_MAX_LIST_SIZE   0x7FFFFFFF
 
-#ifndef CNBT_API
-#define CNBT_API
-#endif
+#define CNBT_SEEK_SET 0
+#define CNBT_SEEK_CUR 1
+#define CNBT_SEEK_END 2
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef enum CNBT_Status {
+typedef enum cnbt_Status {
   CNBT_OK = 0,
   CNBT_INVALID_DATA,
   CNBT_ALLOC_FAILED,
   CNBT_EOF,
   CNBT_ZLIB_ERROR,
-} CNBT_Status;
+} cnbt_Status;
 
-typedef enum CNBT_Type {
+typedef enum cnbt_Type {
   CNBT_TYPE_END = 0,
   CNBT_TYPE_BYTE,
   CNBT_TYPE_SHORT,
@@ -37,74 +49,111 @@ typedef enum CNBT_Type {
   CNBT_TYPE_STRING,
   CNBT_TYPE_LIST,
   CNBT_TYPE_COMPOUND,
-} CNBT_Type;
+} cnbt_Type;
 
-typedef struct CNBT_Tag {
-  alignas(void*) uint8_t data[CNBT_TAG_SIZE];
-} CNBT_Tag;
+#ifdef CNBT__INTERNAL
+typedef struct cnbt_Tag cnbt_Tag;
+struct cnbt_Tag_pub {
+#else
+typedef struct cnbt_Tag {
+#endif
+  void* _private[3];
+#ifdef CNBT__INTERNAL
+};
+#else
+} cnbt_Tag;
+#endif
 
-typedef struct CNBT_KeyTag {
+typedef struct cnbt_KeyTag {
   char* key;
-  CNBT_Tag value;
-} CNBT_KeyTag;
+  cnbt_Tag value;
+} cnbt_KeyTag;
 
-typedef CNBT_Tag CNBT_Byte;
-typedef CNBT_Tag CNBT_Short;
-typedef CNBT_Tag CNBT_Int;
-typedef CNBT_Tag CNBT_Long;
-typedef CNBT_Tag CNBT_Float;
-typedef CNBT_Tag CNBT_Double;
-typedef CNBT_Tag CNBT_String;
-typedef CNBT_Tag CNBT_List;
-typedef CNBT_Tag CNBT_ByteArray;
-typedef CNBT_Tag CNBT_Compound;
+typedef size_t (*PFN_cnbt_read_func)(void* buff, size_t sz, size_t nmemb, void* src);
+typedef size_t (*PFN_cnbt_write_func)(const void* buff, size_t sz, size_t nmemb, void* src);
+typedef int (*PFN_cnbt_seek_func)(void* src, long offset, int origin);
+typedef long (*PFN_cnbt_tell_func)(void* src);
 
-CNBT_API const char* cnbt_tag_name(CNBT_Type type);
+typedef struct cnbt_IoCallbacks {
+  PFN_cnbt_read_func read;
+  PFN_cnbt_write_func write;
+  PFN_cnbt_seek_func seek;
+  PFN_cnbt_tell_func tell;
+} cnbt_IoFunc;
 
-CNBT_API void cnbt_make_end(CNBT_Tag* tag);
-CNBT_API void cnbt_free(CNBT_Tag* tag);
-CNBT_API CNBT_Type cnbt_get_type(const CNBT_Tag* tag);
+typedef cnbt_Tag cnbt_End;
+typedef cnbt_Tag cnbt_Byte;
+typedef cnbt_Tag cnbt_Short;
+typedef cnbt_Tag cnbt_Int;
+typedef cnbt_Tag cnbt_Long;
+typedef cnbt_Tag cnbt_Float;
+typedef cnbt_Tag cnbt_Double;
+typedef cnbt_Tag cnbt_String;
+typedef cnbt_Tag cnbt_ByteArray;
+typedef cnbt_Tag cnbt_List;
+typedef cnbt_Tag cnbt_Compound;
 
-CNBT_API void cnbt_make_byte(CNBT_Byte* tag, int8_t value);
-CNBT_API int8_t cnbt_get_byte(const CNBT_Byte* tag);
+typedef struct cnbt_ZStream_T* cnbt_ZStream;
 
-CNBT_API void cnbt_make_short(CNBT_Short* tag, int16_t value);
-CNBT_API int16_t cnbt_get_short(const CNBT_Short* tag);
+CNBT_API const char* cnbt_tag_name(cnbt_Type type);
+CNBT_API void cnbt_free(cnbt_Tag* tag);
+CNBT_API cnbt_Type cnbt_get_type(const cnbt_Tag* tag);
 
-CNBT_API void cnbt_make_int(CNBT_Int* tag, int32_t value);
-CNBT_API int32_t cnbt_get_int(const CNBT_Int* tag);
+CNBT_API void cnbt_make_end(cnbt_End* tag);
 
-CNBT_API void cnbt_make_long(CNBT_Long* tag, int64_t value);
-CNBT_API int64_t cnbt_get_long(const CNBT_Long* tag);
+CNBT_API void cnbt_make_byte(cnbt_Byte* tag, int8_t value);
+CNBT_API int8_t cnbt_get_byte(const cnbt_Byte* tag);
 
-CNBT_API void cnbt_make_float(CNBT_Float* tag, float value);
-CNBT_API float cnbt_get_float(const CNBT_Float* tag);
+CNBT_API void cnbt_make_short(cnbt_Short* tag, int16_t value);
+CNBT_API int16_t cnbt_get_short(const cnbt_Short* tag);
 
-CNBT_API void cnbt_make_double(CNBT_Double* tag, double value);
-CNBT_API double cnbt_get_double(const CNBT_Double* tag);
+CNBT_API void cnbt_make_int(cnbt_Int* tag, int32_t value);
+CNBT_API int32_t cnbt_get_int(const cnbt_Int* tag);
 
-CNBT_API CNBT_Status cnbt_make_str(CNBT_String* str, const char* value);
-CNBT_API CNBT_Status cnbt_make_strn(CNBT_String* str, const char* value, size_t n);
-CNBT_API size_t cnbt_strlen(const CNBT_String* str);
-CNBT_API char* cnbt_get_str(const CNBT_String* str);
+CNBT_API void cnbt_make_long(cnbt_Long* tag, int64_t value);
+CNBT_API int64_t cnbt_get_long(const cnbt_Long* tag);
 
-CNBT_API CNBT_Status cnbt_make_byte_array(CNBT_ByteArray* arr, const int8_t* data, size_t n);
-CNBT_API size_t cnbt_byte_array_len(const CNBT_ByteArray* arr);
-CNBT_API int8_t* cnbt_get_byte_array(const CNBT_ByteArray* arr);
+CNBT_API void cnbt_make_float(cnbt_Float* tag, float value);
+CNBT_API float cnbt_get_float(const cnbt_Float* tag);
 
-CNBT_API CNBT_Status cnbt_make_list(CNBT_List* list);
-CNBT_API CNBT_Status cnbt_make_list_fill(CNBT_List* list, const CNBT_Tag* data, size_t n);
-CNBT_API CNBT_Tag* cnbt_list_put_tag(CNBT_List* list, CNBT_Tag tag);
-CNBT_API size_t cnbt_list_len(const CNBT_List* list);
-CNBT_API CNBT_Tag* cnbt_list_get(const CNBT_List* list, size_t pos);
-CNBT_API CNBT_Tag* cnbt_list_get_unchecked(const CNBT_List* list, size_t pos);
+CNBT_API void cnbt_make_double(cnbt_Double* tag, double value);
+CNBT_API double cnbt_get_double(const cnbt_Double* tag);
 
-CNBT_API CNBT_Status cnbt_make_compound(CNBT_Compound* comp);
-CNBT_API CNBT_KeyTag* cnbt_comp_put_tag(CNBT_Compound* comp, const char* key, CNBT_Tag tag);
-CNBT_API CNBT_KeyTag* cnbt_comp_get(const CNBT_Compound* comp, const char* key);
+CNBT_API cnbt_Status cnbt_make_str(cnbt_String* str, const char* value);
+CNBT_API cnbt_Status cnbt_make_strn(cnbt_String* str, const char* value, size_t n);
+CNBT_API size_t cnbt_str_len(const cnbt_String* str);
+CNBT_API char* cnbt_str_data(const cnbt_String* str);
+
+CNBT_API cnbt_Status cnbt_make_byte_array(cnbt_ByteArray* arr, const void* data, size_t n);
+CNBT_API size_t cnbt_byte_array_len(const cnbt_ByteArray* arr);
+CNBT_API int8_t* cnbt_byte_array_data(const cnbt_ByteArray* arr);
+
+CNBT_API cnbt_Status cnbt_make_list(cnbt_List* list);
+CNBT_API cnbt_Status cnbt_make_list_fill(cnbt_List* list, cnbt_Tag* data, size_t n);
+CNBT_API cnbt_Tag* cnbt_list_put(cnbt_List* list, cnbt_Tag tag);
+CNBT_API size_t cnbt_list_len(const cnbt_List* list);
+CNBT_API cnbt_Tag* cnbt_list_get(const cnbt_List* list, size_t pos);
+CNBT_API cnbt_Tag* cnbt_list_get_unchecked(const cnbt_List* list, size_t pos);
+
+CNBT_API cnbt_Status cnbt_make_compound(cnbt_Compound* comp);
+CNBT_API cnbt_KeyTag* cnbt_comp_put_tag(cnbt_Compound* comp, const char* key, cnbt_Tag tag);
+CNBT_API cnbt_KeyTag* cnbt_comp_get(const cnbt_Compound* comp, const char* key);
+
+CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs);
+CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs);
+CNBT_API cnbt_Status cnbt_write_pretty(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs);
+
+CNBT_API cnbt_Status cnbt_make_zstream(cnbt_ZStream* zstr, size_t buffsz, void* src,
+                                       const cnbt_IoFunc* cbs);
+CNBT_API void cnbt_free_zstream(cnbt_ZStream zstr);
+
+CNBT_API size_t cnbt_zread(void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr);
+CNBT_API size_t cnbt_zwrite(const void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr);
+CNBT_API int cnbt_zseek(cnbt_ZStream zstr, long offset, int origin);
+CNBT_API long cnbt_ztell(cnbt_ZStream zstr);
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
-#endif // CNBT_H_
+#endif // CNBT_H
