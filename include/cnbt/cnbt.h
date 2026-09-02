@@ -74,7 +74,7 @@ typedef size_t (*PFN_cnbt_write_func)(const void* buff, size_t sz, size_t nmemb,
 typedef int (*PFN_cnbt_seek_func)(void* src, long offset, int origin);
 typedef long (*PFN_cnbt_tell_func)(void* src);
 
-typedef struct cnbt_IoCallbacks {
+typedef struct cnbt_IoFunc {
   PFN_cnbt_read_func read;
   PFN_cnbt_write_func write;
   PFN_cnbt_seek_func seek;

@@ -1,11 +1,11 @@
-#include "core.h"
+#include "cnbt_internal.h"
 #include "stb_ds.h"
 
-CNBT_Status cnbt__read_type(CNBT__ReadCtx* ctx, CNBT_Type* type) {
-  CNBT__ASSERT(ctx && ctx->cbs && ctx->cbs->read);
-  CNBT__ASSERT(type);
+cnbt_Status cnbt__read_type(cnbt__ReadCtx* ctx, cnbt_Type* type) {
+  assert(ctx && ctx->cbs.read);
+  assert(type);
   int8_t tag;
-  size_t read = ctx->cbs->read(&tag, sizeof(tag), 1, ctx->src);
+  size_t read = ctx->cbs.read(&tag, sizeof(tag), 1, ctx->src);
   if (!read) {
     return CNBT_EOF;
   }
@@ -16,11 +16,11 @@ CNBT_Status cnbt__read_type(CNBT__ReadCtx* ctx, CNBT_Type* type) {
   return CNBT_OK;
 }
 
-CNBT_Status cnbt__read_byte(CNBT__ReadCtx* ctx, int8_t* num) {
-  CNBT__ASSERT(ctx && ctx->cbs && ctx->cbs->read);
-  CNBT__ASSERT(num);
+cnbt_Status cnbt__read_byte(cnbt__ReadCtx* ctx, int8_t* num) {
+  assert(ctx && ctx->cbs.read);
+  assert(num);
   uint8_t buff[1];
-  size_t read = ctx->cbs->read(buff, sizeof(buff), 1, ctx->src);
+  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
   if (!read) {
     return CNBT_EOF;
   }
@@ -28,11 +28,11 @@ CNBT_Status cnbt__read_byte(CNBT__ReadCtx* ctx, int8_t* num) {
   return CNBT_OK;
 }
 
-CNBT_Status cnbt__read_short(CNBT__ReadCtx* ctx, int16_t* num) {
-  CNBT__ASSERT(ctx && ctx->cbs && ctx->cbs->read);
-  CNBT__ASSERT(num);
+cnbt_Status cnbt__read_short(cnbt__ReadCtx* ctx, int16_t* num) {
+  assert(ctx && ctx->cbs.read);
+  assert(num);
   uint8_t buff[2];
-  size_t read = ctx->cbs->read(buff, sizeof(buff), 1, ctx->src);
+  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
   if (!read) {
     return CNBT_EOF;
   }
@@ -40,11 +40,11 @@ CNBT_Status cnbt__read_short(CNBT__ReadCtx* ctx, int16_t* num) {
   return CNBT_OK;
 }
 
-CNBT_Status cnbt__read_int(CNBT__ReadCtx* ctx, int32_t* num) {
-  CNBT__ASSERT(ctx && ctx->cbs && ctx->cbs->read);
-  CNBT__ASSERT(num);
+cnbt_Status cnbt__read_int(cnbt__ReadCtx* ctx, int32_t* num) {
+  assert(ctx && ctx->cbs.read);
+  assert(num);
   uint8_t buff[4];
-  size_t read = ctx->cbs->read(buff, sizeof(buff), 1, ctx->src);
+  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
   if (!read) {
     return CNBT_EOF;
   }
@@ -52,11 +52,11 @@ CNBT_Status cnbt__read_int(CNBT__ReadCtx* ctx, int32_t* num) {
   return CNBT_OK;
 }
 
-CNBT_Status cnbt__read_long(CNBT__ReadCtx* ctx, int64_t* num) {
-  CNBT__ASSERT(ctx && ctx->cbs && ctx->cbs->read);
-  CNBT__ASSERT(num);
+cnbt_Status cnbt__read_long(cnbt__ReadCtx* ctx, int64_t* num) {
+  assert(ctx && ctx->cbs.read);
+  assert(num);
   uint8_t buff[8];
-  size_t read = ctx->cbs->read(buff, sizeof(buff), 1, ctx->src);
+  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
   if (!read) {
     return CNBT_EOF;
   }
@@ -64,11 +64,11 @@ CNBT_Status cnbt__read_long(CNBT__ReadCtx* ctx, int64_t* num) {
   return CNBT_OK;
 }
 
-CNBT_Status cnbt__read_float(CNBT__ReadCtx* ctx, float* num) {
-  CNBT__ASSERT(ctx && ctx->cbs && ctx->cbs->read);
-  CNBT__ASSERT(num);
+cnbt_Status cnbt__read_float(cnbt__ReadCtx* ctx, f32* num) {
+  assert(ctx && ctx->cbs.read);
+  assert(num);
   uint8_t buff[4];
-  size_t read = ctx->cbs->read(buff, sizeof(buff), 1, ctx->src);
+  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
   if (!read) {
     return CNBT_EOF;
   }
@@ -76,11 +76,11 @@ CNBT_Status cnbt__read_float(CNBT__ReadCtx* ctx, float* num) {
   return CNBT_OK;
 }
 
-CNBT_Status cnbt__read_double(CNBT__ReadCtx* ctx, double* num) {
-  CNBT__ASSERT(ctx && ctx->cbs && ctx->cbs->read);
-  CNBT__ASSERT(num);
+cnbt_Status cnbt__read_double(cnbt__ReadCtx* ctx, f64* num) {
+  assert(ctx && ctx->cbs.read);
+  assert(num);
   uint8_t buff[8];
-  size_t read = ctx->cbs->read(buff, sizeof(buff), 1, ctx->src);
+  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
   if (!read) {
     return CNBT_EOF;
   }
@@ -88,114 +88,95 @@ CNBT_Status cnbt__read_double(CNBT__ReadCtx* ctx, double* num) {
   return CNBT_OK;
 }
 
-CNBT_Status cnbt__read_string(CNBT__ReadCtx* ctx, char** data, uint32_t* len) {
-  CNBT__ASSERT(ctx && ctx->cbs && ctx->cbs->read);
-  CNBT__ASSERT(data);
+cnbt_Status cnbt__read_string(cnbt__ReadCtx* ctx, cnbt__StringData* s) {
+  assert(ctx && ctx->cbs.read);
+  assert(s);
 
-  CNBT_Status ret;
+  cnbt_Status ret;
   uint16_t sz;
-  size_t read = ctx->cbs->read(&sz, sizeof(sz), 1, ctx->src);
+  size_t read = ctx->cbs.read(&sz, sizeof(sz), 1, ctx->src);
   if (!read) {
     return CNBT_EOF;
   }
-  char* str = CNBT__MALLOC(sz + 1);
-  read = ctx->cbs->read(str, sizeof(*str), sz, ctx->src);
+  char* str = CNBT_MALLOC(sz + 1);
+  read = ctx->cbs.read(str, sizeof(*str), sz, ctx->src);
   if (!read) {
     return CNBT_EOF;
   }
   str[sz] = '\0';
-  *data = str;
-  if (len) {
-    *len = (uint32_t)sz;
-  }
+  s->data = str;
+  s->size = (u32)sz;
   return CNBT_OK;
 }
 
-CNBT_Status cnbt__read_blob(CNBT__ReadCtx* ctx, int8_t** data, uint32_t* len) {
-  CNBT__ASSERT(ctx);
-  CNBT__ASSERT(data);
+cnbt_Status cnbt__read_blob(cnbt__ReadCtx* ctx, cnbt__ByteArrayData* d) {
+  assert(ctx);
+  assert(d);
 
-  CNBT_Status ret;
+  cnbt_Status ret;
   int32_t sz;
   ret = cnbt__read_int(ctx, &sz);
   if (ret) {
     return ret;
   }
-  int8_t* blob = CNBT__MALLOC(sz);
+  int8_t* blob = CNBT_MALLOC(sz);
   if (!blob) {
     ret = CNBT_ALLOC_FAILED;
     return ret;
   }
-  *data = blob;
-  *len = (uint32_t)sz;
+  d->data = blob;
+  d->size = (uint32_t)sz;
   return ret;
 }
 
-static CNBT_Status read_data(CNBT__ReadCtx* ctx, CNBT_Tag* data, CNBT_Type type) {
-  CNBT_Status ret;
+static cnbt_Status read_data(cnbt__ReadCtx* ctx, cnbt_Tag* data, cnbt_Type type) {
+  cnbt_Status ret;
   memset(data, 0x00, sizeof(*data));
-  CNBT__GET_DATA(data)->tag = type;
+  data->type = type;
   switch (type) {
     case CNBT_TYPE_END:
       ret = CNBT_OK;
     case CNBT_TYPE_BYTE: {
-      int8_t num;
-      ret = cnbt__read_byte(ctx, &num);
-      if (!ret) {
-        CNBT__GET_DATA(data)->as_int = num;
-      }
+      ret = cnbt__read_byte(ctx, &data->as_i8);
     } break;
     case CNBT_TYPE_SHORT: {
-      int16_t num;
-      ret = cnbt__read_short(ctx, &num);
-      if (!ret) {
-        CNBT__GET_DATA(data)->as_int = num;
-      }
+      ret = cnbt__read_short(ctx, &data->as_i16);
     } break;
     case CNBT_TYPE_INT: {
-      int32_t num;
-      ret = cnbt__read_int(ctx, &num);
-      if (!ret) {
-        CNBT__GET_DATA(data)->as_int = num;
-      }
+      ret = cnbt__read_int(ctx, &data->as_i32);
     } break;
     case CNBT_TYPE_LONG: {
-      int64_t num;
-      ret = cnbt__read_long(ctx, &num);
-      if (!ret) {
-        CNBT__GET_DATA(data)->as_int = num;
-      }
+      ret = cnbt__read_long(ctx, &data->as_i64);
     } break;
     case CNBT_TYPE_FLOAT: {
-      ret = cnbt__read_float(ctx, &CNBT__GET_DATA(data)->as_float);
+      ret = cnbt__read_float(ctx, &data->as_f32);
     } break;
     case CNBT_TYPE_DOUBLE: {
-      ret = cnbt__read_double(ctx, &CNBT__GET_DATA(data)->as_double);
+      ret = cnbt__read_double(ctx, &data->as_f64);
     } break;
     case CNBT_TYPE_BYTE_ARRAY: {
-      ret = cnbt__read_blob(ctx, &CNBT__GET_DATA(data)->as_blob, &CNBT__GET_DATA(data)->size);
+      ret = cnbt__read_blob(ctx, &data->as_bytearr);
     } break;
     case CNBT_TYPE_STRING: {
-      ret = cnbt__read_string(ctx, &CNBT__GET_DATA(data)->as_str, &CNBT__GET_DATA(data)->size);
+      ret = cnbt__read_string(ctx, &data->as_string);
     } break;
     case CNBT_TYPE_LIST: {
-      ret = cnbt__read_list(ctx, &CNBT__GET_DATA(data)->as_list, &CNBT__GET_DATA(data)->size);
+      ret = cnbt__read_list(ctx, &data->as_list);
     } break;
     case CNBT_TYPE_COMPOUND: {
-      ret =
-        cnbt__read_compound(ctx, &CNBT__GET_DATA(data)->as_compound, &CNBT__GET_DATA(data)->size);
+      ret = cnbt__read_compound(ctx, &data->as_compound);
     } break;
   }
   return ret;
 }
 
-CNBT_Status cnbt__read_list(CNBT__ReadCtx* ctx, CNBT_Tag** data, uint32_t* len) {
-  CNBT__ASSERT(ctx);
-  CNBT__ASSERT(data);
+cnbt_Status cnbt__read_list(cnbt__ReadCtx* ctx, cnbt__ListData* d) {
+  assert(ctx);
+  assert(d);
 
-  CNBT_Status ret;
-  CNBT_Type type;
-  CNBT_Tag* list = NULL;
+  cnbt_Status ret;
+  cnbt_Type type;
+  cnbt_Tag* list = NULL;
   ret = cnbt__read_type(ctx, &type);
   if (ret) {
     goto list_cleanup;
@@ -206,14 +187,14 @@ CNBT_Status cnbt__read_list(CNBT__ReadCtx* ctx, CNBT_Tag** data, uint32_t* len) 
   if (ret) {
     goto list_cleanup;
   }
-  if (len < 0) {
+  if (sz < 0) {
     ret = CNBT_INVALID_DATA;
     goto list_cleanup;
   }
 
   if (type != CNBT_TYPE_END) {
     for (int32_t i = 0; i < sz; ++i) {
-      CNBT_Tag value;
+      cnbt_Tag value;
       ret = read_data(ctx, &value, type);
       if (ret) {
         goto list_cleanup;
@@ -221,53 +202,52 @@ CNBT_Status cnbt__read_list(CNBT__ReadCtx* ctx, CNBT_Tag** data, uint32_t* len) 
       stbds_arrput(list, value);
     }
   }
-  *data = list;
-  *len = (uint32_t)sz;
+  d->data = list;
+  d->size = (u32)sz;
   return ret;
 
 list_cleanup:
   if (list) {
-    cnbt__free_list(list);
+    cnbt__free_list(d);
   }
   return ret;
 }
 
-CNBT_Status cnbt__read_compound(CNBT__ReadCtx* ctx, CNBT_KeyTag** data, uint32_t* len) {
-  CNBT__ASSERT(ctx);
-  CNBT__ASSERT(data);
+cnbt_Status cnbt__read_compound(cnbt__ReadCtx* ctx, cnbt__CompoundData* d) {
+  assert(ctx);
+  assert(d);
 
-  CNBT_Type type;
-  CNBT_Status ret = CNBT_OK;
-  CNBT_KeyTag* comp = NULL;
+  cnbt_Type type;
+  cnbt_Status ret = CNBT_OK;
+  cnbt_KeyTag* comp = NULL;
   while (cnbt__read_type(ctx, &type) && type != CNBT_TYPE_END) {
-    char* key;
-    CNBT_Tag value;
-
-    ret = cnbt__read_string(ctx, &key, NULL);
+    cnbt_Tag value;
+    cnbt__StringData key;
+    ret = cnbt__read_string(ctx, &key);
     if (ret) {
       goto compound_clean;
     }
     ret = read_data(ctx, &value, type);
     if (!ret) {
-      stbds_shput(comp, key, value);
+      stbds_shput(comp, key.data, value);
     }
-    CNBT__FREE(key);
+    cnbt__free_string(&key);
     if (ret) {
       goto compound_clean;
     }
   }
-  *data = comp;
-  *len = stbds_shlenu(comp);
+  d->data = comp;
+  d->size = stbds_shlenu(comp);
   return ret;
 
 compound_clean:
   if (comp) {
-    cnbt__free_compound(CNBT__GET_DATA(data)->as_compound);
+    cnbt__free_compound(d);
   }
   return ret;
 }
 
-CNBT_API CNBT_Status cnbt_read(CNBT_Tag* tag, void* src, const CNBT_IoCallbacks* cbs) {
+CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs) {
   if (!tag || !cbs) {
     return CNBT_INVALID_DATA;
   }
@@ -275,16 +255,16 @@ CNBT_API CNBT_Status cnbt_read(CNBT_Tag* tag, void* src, const CNBT_IoCallbacks*
     return CNBT_INVALID_DATA;
   }
 
-  CNBT__ReadCtx ctx;
+  cnbt__ReadCtx ctx;
   ctx.src = src;
-  ctx.cbs = cbs;
+  ctx.cbs = *cbs;
   long start_pos = -1;
   if (cbs->tell) {
     start_pos = cbs->tell(src);
   }
 
-  CNBT_Status ret;
-  CNBT_Type type;
+  cnbt_Status ret;
+  cnbt_Type type;
   ret = cnbt__read_type(&ctx, &type);
   if (ret) {
     goto read_err;
@@ -302,7 +282,7 @@ read_err:
   return ret;
 }
 
-CNBT_API CNBT_Status cnbt_write(const CNBT_Tag* tag, void* src, const CNBT_IoCallbacks* cbs) {
+CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs) {
   // TODO
   return CNBT_OK;
 }
