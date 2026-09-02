@@ -139,18 +139,14 @@ CNBT_API cnbt_Status cnbt_make_compound(cnbt_Compound* comp);
 CNBT_API cnbt_KeyTag* cnbt_comp_insert(cnbt_Compound* comp, const char* key, cnbt_Tag tag);
 CNBT_API cnbt_KeyTag* cnbt_comp_get(const cnbt_Compound* comp, const char* key);
 
-CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs);
-CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs);
-CNBT_API cnbt_Status cnbt_write_pretty(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs);
+CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, void* src, const cnbt_IoFunc* func);
+CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* func);
+CNBT_API cnbt_Status cnbt_write_pretty(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* func);
 
 CNBT_API cnbt_Status cnbt_make_zstream(cnbt_ZStream* zstr, size_t buffsz, void* src,
-                                       const cnbt_IoFunc* cbs);
+                                       const cnbt_IoFunc* func);
 CNBT_API void cnbt_free_zstream(cnbt_ZStream zstr);
-
-CNBT_API size_t cnbt_zread(void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr);
-CNBT_API size_t cnbt_zwrite(const void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr);
-CNBT_API int cnbt_zseek(cnbt_ZStream zstr, long offset, int origin);
-CNBT_API long cnbt_ztell(cnbt_ZStream zstr);
+CNBT_API void cnbt_load_zstream_funcs(cnbt_ZStream zstr, cnbt_IoFunc* func);
 
 #ifdef __cplusplus
 } // extern "C"

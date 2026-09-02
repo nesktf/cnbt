@@ -16,13 +16,13 @@ typedef struct cnbt_ZStream_T {
   size_t buffsz;
 } cnbt_ZStream_T;
 
-static void* zalloc(void* q, unsigned n, unsigned m) {
-  (void)q;
+static void* zalloc(void* user, unsigned n, unsigned m) {
+  UNUSED(user);
   return CNBT_MALLOC(n * m);
 }
 
-static void zfree(void* q, void* p) {
-  (void)q;
+static void zfree(void* user, void* p) {
+  UNUSED(user);
   CNBT_FREE(p);
 }
 
@@ -85,7 +85,7 @@ CNBT_API void cnbt_free_zstream(cnbt_ZStream zstr) {
   CNBT_FREE(zstr->buff);
 }
 
-CNBT_API size_t cnbt_zread(void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr) {
+static size_t zstream_read(void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr) {
   assert(zstr && "Invalid zstream");
   if (zstr->stream.avail_in == 0) {
     size_t count = zstr->cbs.read(zstr->buff, sizeof(*zstr->buff), zstr->buffsz, zstr->src);
@@ -104,17 +104,27 @@ CNBT_API size_t cnbt_zread(void* buff, size_t sz, size_t nmemb, cnbt_ZStream zst
   return 0;
 }
 
-CNBT_API size_t cnbt_zwrite(const void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr) {
+static size_t zstream_write(const void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr) {
   // TODO
   return 0;
 }
 
-CNBT_API int cnbt_zseek(cnbt_ZStream zstr, long offset, int origin) {
+static int zstream_seek(cnbt_ZStream zstr, long offset, int origin) {
   // TODO
   return 0;
 }
 
-CNBT_API long cnbt_ztell(cnbt_ZStream zstr) {
+static long zstream_tell(cnbt_ZStream zstr) {
   // TODO
   return 0;
+}
+
+CNBT_API void cnbt_load_zstream_funcs(cnbt_ZStream zstr, cnbt_IoFunc* cbs) {
+  if (!zstr || !cbs) {
+    return;
+  }
+  cbs->write = (PFN_cnbt_write_func)&zstream_write;
+  cbs->read = (PFN_cnbt_read_func)&zstream_read;
+  cbs->seek = zstr->cbs.seek ? (PFN_cnbt_seek_func)&zstream_seek : NULL;
+  cbs->tell = zstr->cbs.tell ? (PFN_cnbt_tell_func)&zstream_tell : NULL;
 }
