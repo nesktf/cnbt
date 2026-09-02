@@ -1,14 +1,13 @@
-#include <cnbt/cnbt.h>
-
 #include "tests.h"
 
 #include <string.h>
 
-MunitResult test_int_init(const MunitParameter* params, void* data) {
-  (void)params;
-  (void)data;
+static MunitResult test_primitive_init(const MunitParameter* params, void* data) {
+  UNUSED(params);
+  UNUSED(data);
+
   {
-    CNBT_Byte byte_tag;
+    cnbt_Byte byte_tag;
     cnbt_make_byte(&byte_tag, 47);
     munit_assert_true(cnbt_get_type(&byte_tag) == CNBT_TYPE_BYTE);
 
@@ -17,7 +16,7 @@ MunitResult test_int_init(const MunitParameter* params, void* data) {
     cnbt_free(&byte_tag);
   }
   {
-    CNBT_Short short_tag;
+    cnbt_Short short_tag;
     cnbt_make_short(&short_tag, 4124);
     munit_assert_true(cnbt_get_type(&short_tag) == CNBT_TYPE_SHORT);
 
@@ -26,7 +25,7 @@ MunitResult test_int_init(const MunitParameter* params, void* data) {
     cnbt_free(&short_tag);
   }
   {
-    CNBT_Int int_tag;
+    cnbt_Int int_tag;
     cnbt_make_int(&int_tag, 214214);
     munit_assert_true(cnbt_get_type(&int_tag) == CNBT_TYPE_INT);
 
@@ -35,7 +34,7 @@ MunitResult test_int_init(const MunitParameter* params, void* data) {
     cnbt_free(&int_tag);
   }
   {
-    CNBT_Long long_tag;
+    cnbt_Long long_tag;
     cnbt_make_long(&long_tag, 12125125512);
     munit_assert_true(cnbt_get_type(&long_tag) == CNBT_TYPE_LONG);
 
@@ -44,7 +43,7 @@ MunitResult test_int_init(const MunitParameter* params, void* data) {
     cnbt_free(&long_tag);
   }
   {
-    CNBT_Float float_tag;
+    cnbt_Float float_tag;
     cnbt_make_float(&float_tag, 12412.f);
     munit_assert_true(cnbt_get_type(&float_tag) == CNBT_TYPE_FLOAT);
 
@@ -53,7 +52,7 @@ MunitResult test_int_init(const MunitParameter* params, void* data) {
     cnbt_free(&float_tag);
   }
   {
-    CNBT_Double double_tag;
+    cnbt_Double double_tag;
     cnbt_make_double(&double_tag, 24214.);
     munit_assert_true(cnbt_get_type(&double_tag) == CNBT_TYPE_DOUBLE);
 
@@ -64,49 +63,50 @@ MunitResult test_int_init(const MunitParameter* params, void* data) {
   return MUNIT_OK;
 }
 
-MunitResult test_list_init(const MunitParameter* params, void* data) {
-  (void)params;
-  (void)data;
-  CNBT_Status res;
-  CNBT_Tag* tag;
+static MunitResult test_list_init(const MunitParameter* params, void* data) {
+  UNUSED(params);
+  UNUSED(data);
 
-  CNBT_List list;
+  cnbt_Status res;
+  cnbt_Tag* tag;
+
+  cnbt_List list;
   res = cnbt_make_list(&list);
   munit_assert_true(res == CNBT_OK);
   munit_assert_true(cnbt_get_type(&list) == CNBT_TYPE_LIST);
 
   {
-    CNBT_Float float_tag;
+    cnbt_Float float_tag;
     cnbt_make_float(&float_tag, 1.f);
-    tag = cnbt_list_put_tag(&list, float_tag);
+    tag = cnbt_list_push(&list, float_tag);
     munit_assert_ptr_not_null(tag);
     munit_assert_true(cnbt_get_type(tag) == CNBT_TYPE_FLOAT);
     munit_assert_true(cnbt_get_float(tag) == 1.f);
   }
 
   {
-    CNBT_String str_tag;
+    cnbt_String str_tag;
     res = cnbt_make_str(&str_tag, "my funny string");
     munit_assert_true(res == CNBT_OK);
-    tag = cnbt_list_put_tag(&list, str_tag);
+    tag = cnbt_list_push(&list, str_tag);
     munit_assert_ptr_not_null(tag);
     munit_assert_true(cnbt_get_type(tag) == CNBT_TYPE_STRING);
-    char* str = cnbt_get_str(tag);
+    char* str = cnbt_str_data(tag);
     munit_assert_ptr_not_null(str);
     munit_assert_string_equal(str, "my funny string");
   }
 
   {
-    CNBT_ByteArray arr_tag;
+    cnbt_ByteArray arr_tag;
     int8_t data[] = {0, 1, 2, 3, 4, 5};
     res = cnbt_make_byte_array(&arr_tag, data, sizeof(data));
     munit_assert_true(res == CNBT_OK);
 
-    tag = cnbt_list_put_tag(&list, arr_tag);
+    tag = cnbt_list_push(&list, arr_tag);
     munit_assert_ptr_not_null(tag);
     munit_assert_true(cnbt_get_type(tag) == CNBT_TYPE_BYTE_ARRAY);
 
-    int8_t* read = cnbt_get_byte_array(tag);
+    int8_t* read = cnbt_byte_array_data(tag);
     munit_assert_ptr_not_null(read);
     munit_assert_memory_equal(sizeof(data), data, read);
   }
@@ -124,21 +124,22 @@ MunitResult test_list_init(const MunitParameter* params, void* data) {
   return MUNIT_OK;
 }
 
-MunitResult test_comp_init(const MunitParameter* params, void* data) {
-  (void)params;
-  (void)data;
-  CNBT_Status res;
-  CNBT_KeyTag* tag;
+static MunitResult test_compound_init(const MunitParameter* params, void* data) {
+  UNUSED(params);
+  UNUSED(data);
 
-  CNBT_Compound comp;
+  cnbt_Status res;
+  cnbt_KeyTag* tag;
+
+  cnbt_Compound comp;
   res = cnbt_make_compound(&comp);
   munit_assert_true(res == CNBT_OK);
   munit_assert_true(cnbt_get_type(&comp) == CNBT_TYPE_COMPOUND);
 
   {
-    CNBT_Float float_tag;
+    cnbt_Float float_tag;
     cnbt_make_float(&float_tag, 1.f);
-    tag = cnbt_comp_put_tag(&comp, "my float", float_tag);
+    tag = cnbt_comp_insert(&comp, "my float", float_tag);
     munit_assert_true(res == CNBT_OK);
     munit_assert_ptr_not_null(tag);
     munit_assert_string_equal(tag->key, "my float");
@@ -156,3 +157,14 @@ MunitResult test_comp_init(const MunitParameter* params, void* data) {
   cnbt_free(&comp);
   return MUNIT_OK;
 }
+
+static MunitTest tests[] = {
+  {"/primitive-init", test_primitive_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
+  {"/list-init", test_list_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
+  {"/compound-init", test_compound_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
+};
+
+TestData data_tests = {
+  .tests = tests,
+  .len = ARRSZ(tests),
+};

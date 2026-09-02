@@ -1,5 +1,4 @@
 #include "tests.h"
-#include <cnbt/cnbt.h>
 
 #include <stdio.h>
 
@@ -20,7 +19,7 @@ static size_t write_func(const void* buff, size_t sz, size_t nmemb, BuffCtx* ctx
   return nmemb;
 }
 
-static CNBT_IoCallbacks BUFFER_CBS = {
+static cnbt_IoFunc BUFFER_CBS = {
   .read = (PFN_cnbt_read_func)read_func,
   .write = (PFN_cnbt_write_func)write_func,
   .seek = NULL,
@@ -40,17 +39,17 @@ static const uint8_t read_basic_data[] = {
 };
 // clang-format on
 
-MunitResult test_read_basic(const MunitParameter* params, void* data) {
-  (void)params;
-  (void)data;
+static MunitResult test_read_basic(const MunitParameter* params, void* data) {
+  UNUSED(params);
+  UNUSED(data);
 
-  CNBT_Status ret;
-  CNBT_Type type;
+  cnbt_Status ret;
+  cnbt_Type type;
   BuffCtx ctx = {0};
   memcpy(ctx.data, read_basic_data, sizeof(read_basic_data));
 
-  CNBT__ReadCtx read;
-  read.cbs = &BUFFER_CBS;
+  cnbt__ReadCtx read;
+  read.cbs = BUFFER_CBS;
   read.src = &ctx;
 
   {
@@ -68,14 +67,13 @@ MunitResult test_read_basic(const MunitParameter* params, void* data) {
     munit_assert_true(ret == CNBT_OK);
     munit_assert_true(type == CNBT_TYPE_STRING);
 
-    char* str = NULL;
-    uint32_t str_len = 0;
-    ret = cnbt__read_string(&read, &str, &str_len);
+    cnbt__StringData str;
+    ret = cnbt__read_string(&read, &str);
     munit_assert_true(ret == CNBT_OK);
-    munit_assert_uint32(str_len, ==, 9);
-    munit_assert_not_null(str);
-    munit_assert_string_equal(str, "foobarbaz");
-    CNBT__FREE(str);
+    munit_assert_uint32(str.size, ==, 9);
+    munit_assert_not_null(str.data);
+    munit_assert_string_equal(str.data, "foobarbaz");
+    cnbt__free_string(&str);
   }
   {
     ret = cnbt__read_type(&read, &type);
@@ -98,42 +96,42 @@ static const char pretty_expected[] = R"({
 }
 )";
 
-MunitResult test_write_pretty(const MunitParameter* params, void* data) {
-  (void)params;
-  (void)data;
+static MunitResult test_write_pretty(const MunitParameter* params, void* data) {
+  UNUSED(params);
+  UNUSED(data);
 
-  CNBT_Tag comp;
+  cnbt_Tag comp;
   cnbt_make_compound(&comp);
 
-  CNBT_Tag tag, list;
+  cnbt_Tag tag, list;
   cnbt_make_byte(&tag, 0);
-  cnbt_comp_put_tag(&comp, "the_byte", tag);
+  cnbt_comp_insert(&comp, "the_byte", tag);
 
   cnbt_make_short(&tag, 124);
-  cnbt_comp_put_tag(&comp, "the_short", tag);
+  cnbt_comp_insert(&comp, "the_short", tag);
 
   cnbt_make_int(&tag, 144);
-  cnbt_comp_put_tag(&comp, "the_int", tag);
+  cnbt_comp_insert(&comp, "the_int", tag);
 
   cnbt_make_long(&tag, 999);
-  cnbt_comp_put_tag(&comp, "the_long", tag);
+  cnbt_comp_insert(&comp, "the_long", tag);
 
   cnbt_make_double(&tag, 333);
-  cnbt_comp_put_tag(&comp, "some_double", tag);
+  cnbt_comp_insert(&comp, "some_double", tag);
 
   cnbt_make_list(&list);
   cnbt_make_short(&tag, 4511);
-  cnbt_list_put_tag(&list, tag);
+  cnbt_list_push(&list, tag);
   cnbt_make_short(&tag, 5555);
-  cnbt_list_put_tag(&list, tag);
-  cnbt_comp_put_tag(&comp, "funny_list", list);
+  cnbt_list_push(&list, tag);
+  cnbt_comp_insert(&comp, "funny_list", list);
 
   cnbt_make_str(&tag, "hehahah");
-  cnbt_comp_put_tag(&comp, "my_string", tag);
+  cnbt_comp_insert(&comp, "my_string", tag);
 
   int8_t bytes[] = {0, 1, 2, 3, 4, -1};
   cnbt_make_byte_array(&tag, bytes, sizeof(bytes));
-  cnbt_comp_put_tag(&comp, "bytes", tag);
+  cnbt_comp_insert(&comp, "bytes", tag);
 
   BuffCtx ctx = {0};
   cnbt_write_pretty(&comp, &ctx, &BUFFER_CBS);
@@ -142,3 +140,13 @@ MunitResult test_write_pretty(const MunitParameter* params, void* data) {
 
   return MUNIT_OK;
 }
+
+static MunitTest tests[] = {
+  {"/write-pretty", test_write_pretty, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
+  {"/read-basic", test_read_basic, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
+};
+
+TestData io_tests = {
+  .tests = tests,
+  .len = ARRSZ(tests),
+};

@@ -1,5 +1,5 @@
-#ifndef CNBT_CORE_H
-#define CNBT_CORE_H
+#ifndef CNBT_INTERNAL_H
+#define CNBT_INTERNAL_H
 
 #include <assert.h>
 #include <stdint.h>
@@ -9,6 +9,7 @@
 #define CNBT_REALLOC realloc
 
 #define ARRSZ(_arr) sizeof(_arr) / sizeof(_arr[0])
+#define UNUSED(_o)  (void)_o
 
 #define CNBT_TYPE_NULL -1
 
@@ -90,4 +91,4 @@ cnbt_Status cnbt__read_blob(cnbt__ReadCtx* ctx, cnbt__ByteArrayData* arr);
 cnbt_Status cnbt__read_list(cnbt__ReadCtx* ctx, cnbt__ListData* list);
 cnbt_Status cnbt__read_compound(cnbt__ReadCtx* ctx, cnbt__CompoundData* comp);
 
-#endif // CNBT_CORE_H
+#endif // CNBT_INTERNAL_H
