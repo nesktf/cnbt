@@ -98,6 +98,13 @@ CNBT_API cnbt_KeyTag* cnbt_comp_insert(cnbt_Compound* comp, const char* key, cnb
   return shgetp_null(comp->as_compound.data, key);
 }
 
+CNBT_API size_t cnbt_comp_len(const cnbt_Compound* comp) {
+  if (!comp) {
+    return 0;
+  }
+  return stbds_shlenu(comp->as_compound.data);
+}
+
 CNBT_API cnbt_KeyTag* cnbt_comp_get(const cnbt_Compound* comp, const char* key) {
   if (!comp || !key) {
     return NULL;

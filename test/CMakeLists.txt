@@ -9,6 +9,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} $ENV{CFLAGS} -Wall -Wextra -Wpedantic -Wno-p
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -O0 -g2 -ggdb -fsanitize=address,leak")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -O3")
 
+set(TESTFILES "${CMAKE_CURRENT_SOURCE_DIR}/files")
 file(GLOB CNBT_TEST_SRC "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 
 message(STATUS "cnbt: Fetching munit contents...")
@@ -26,4 +27,5 @@ target_include_directories(${PROJECT_NAME}
   "${munit_SOURCE_DIR}"
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE cnbt)
+target_compile_definitions(${PROJECT_NAME} PRIVATE -DTESTFILES=\"${TESTFILES}\")
 enable_testing()
