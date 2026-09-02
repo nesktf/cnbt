@@ -72,6 +72,7 @@ static_assert(sizeof(struct cnbt_Tag) <= sizeof(struct cnbt_Tag_pub), "cnbt_Tag 
 typedef struct cnbt__ReadCtx {
   cnbt_IoFunc cbs;
   void* src;
+  cnbt_EndianMode endian_mode;
 } cnbt__ReadCtx;
 
 void cnbt__free_byte_array(cnbt__ByteArrayData* arr);

@@ -51,6 +51,11 @@ typedef enum cnbt_Type {
   CNBT_TYPE_COMPOUND,
 } cnbt_Type;
 
+typedef enum cnbt_EndianMode {
+  CNBT_BIG_ENDIAN = 0,
+  CNBT_LITTLE_ENDIAN,
+} cnbt_EndianMode;
+
 #ifdef CNBT__INTERNAL
 typedef struct cnbt_Tag cnbt_Tag;
 struct cnbt_Tag_pub {
@@ -139,8 +144,10 @@ CNBT_API cnbt_Status cnbt_make_compound(cnbt_Compound* comp);
 CNBT_API cnbt_KeyTag* cnbt_comp_insert(cnbt_Compound* comp, const char* key, cnbt_Tag tag);
 CNBT_API cnbt_KeyTag* cnbt_comp_get(const cnbt_Compound* comp, const char* key);
 
-CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, void* src, const cnbt_IoFunc* func);
-CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* func);
+CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, cnbt_EndianMode mode, void* src,
+                               const cnbt_IoFunc* func);
+CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, cnbt_EndianMode mode, void* src,
+                                const cnbt_IoFunc* func);
 CNBT_API cnbt_Status cnbt_write_pretty(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* func);
 
 CNBT_API cnbt_Status cnbt_make_zstream(cnbt_ZStream* zstr, size_t buffsz, void* src,

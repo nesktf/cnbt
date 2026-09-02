@@ -16,76 +16,96 @@ cnbt_Status cnbt__read_type(cnbt__ReadCtx* ctx, cnbt_Type* type) {
   return CNBT_OK;
 }
 
-cnbt_Status cnbt__read_byte(cnbt__ReadCtx* ctx, int8_t* num) {
+cnbt_Status cnbt__read_byte(cnbt__ReadCtx* ctx, i8* num) {
   assert(ctx && ctx->cbs.read);
   assert(num);
+
   uint8_t buff[1];
-  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
-  if (!read) {
+  if (!ctx->cbs.read(buff, sizeof(buff), 1, ctx->src)) {
     return CNBT_EOF;
   }
-  memcpy(num, buff, sizeof(buff)); // TODO: check endianess
+  *num = (i8)buff[0];
   return CNBT_OK;
 }
 
-cnbt_Status cnbt__read_short(cnbt__ReadCtx* ctx, int16_t* num) {
+cnbt_Status cnbt__read_short(cnbt__ReadCtx* ctx, i16* num) {
   assert(ctx && ctx->cbs.read);
   assert(num);
+
   uint8_t buff[2];
-  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
-  if (!read) {
+  if (!ctx->cbs.read(buff, sizeof(buff), 1, ctx->src)) {
     return CNBT_EOF;
   }
-  memcpy(num, buff, sizeof(buff)); // TODO: check endianess
+  if (ctx->endian_mode == CNBT_BIG_ENDIAN) {
+    *num = (i16)buff[1] | ((i16)buff[0] << 8);
+  } else {
+    *num = (u16)buff[0] | ((u16)buff[1] << 8);
+  }
   return CNBT_OK;
 }
 
-cnbt_Status cnbt__read_int(cnbt__ReadCtx* ctx, int32_t* num) {
+cnbt_Status cnbt__read_int(cnbt__ReadCtx* ctx, i32* num) {
   assert(ctx && ctx->cbs.read);
   assert(num);
+
   uint8_t buff[4];
-  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
-  if (!read) {
+  if (!ctx->cbs.read(buff, sizeof(buff), 1, ctx->src)) {
     return CNBT_EOF;
   }
-  memcpy(num, buff, sizeof(buff)); // TODO: check endianess
+  if (ctx->endian_mode == CNBT_BIG_ENDIAN) {
+    *num = (i32)buff[3] | ((i32)buff[2] << 8) | ((i32)buff[1] << 16) | ((i32)buff[0] << 24);
+  } else {
+    *num = (i32)buff[0] | ((i32)buff[1] << 8) | ((i32)buff[2] << 16) | ((i32)buff[3] << 24);
+  }
   return CNBT_OK;
 }
 
-cnbt_Status cnbt__read_long(cnbt__ReadCtx* ctx, int64_t* num) {
+cnbt_Status cnbt__read_long(cnbt__ReadCtx* ctx, i64* num) {
   assert(ctx && ctx->cbs.read);
   assert(num);
+
   uint8_t buff[8];
-  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
-  if (!read) {
+  if (!ctx->cbs.read(buff, sizeof(buff), 1, ctx->src)) {
     return CNBT_EOF;
   }
-  memcpy(num, buff, sizeof(buff)); // TODO: check endianess
+  if (ctx->endian_mode == CNBT_BIG_ENDIAN) {
+    *num = (i64)buff[7] | ((i64)buff[6] << 8) | ((i64)buff[5] << 16) | ((i64)buff[4] << 24) |
+           ((i64)buff[3] << 32) | ((i64)buff[2] << 40) | ((i64)buff[1] << 48) |
+           ((i64)buff[0] << 56);
+  } else {
+    *num = (i64)buff[0] | ((i64)buff[1] << 8) | ((i64)buff[2] << 16) | ((i64)buff[3] << 24) |
+           ((i64)buff[4] << 32) | ((i64)buff[5] << 40) | ((i64)buff[6] << 48) |
+           ((i64)buff[7] << 56);
+  }
   return CNBT_OK;
 }
 
 cnbt_Status cnbt__read_float(cnbt__ReadCtx* ctx, f32* num) {
-  assert(ctx && ctx->cbs.read);
-  assert(num);
-  uint8_t buff[4];
-  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
-  if (!read) {
-    return CNBT_EOF;
+  union {
+    i32 temp_int;
+    f32 temp_float;
+  } u;
+
+  cnbt_Status ret = cnbt__read_int(ctx, &u.temp_int);
+  if (ret) {
+    return ret;
   }
-  memcpy(num, buff, sizeof(buff)); // TODO: check endianess
-  return CNBT_OK;
+  *num = u.temp_float;
+  return ret;
 }
 
 cnbt_Status cnbt__read_double(cnbt__ReadCtx* ctx, f64* num) {
-  assert(ctx && ctx->cbs.read);
-  assert(num);
-  uint8_t buff[8];
-  size_t read = ctx->cbs.read(buff, sizeof(buff), 1, ctx->src);
-  if (!read) {
-    return CNBT_EOF;
+  union {
+    i64 temp_int;
+    f64 temp_double;
+  } u;
+
+  cnbt_Status ret = cnbt__read_long(ctx, &u.temp_int);
+  if (ret) {
+    return ret;
   }
-  memcpy(num, buff, sizeof(buff)); // TODO: check endianess
-  return CNBT_OK;
+  *num = u.temp_double;
+  return ret;
 }
 
 cnbt_Status cnbt__read_string(cnbt__ReadCtx* ctx, cnbt__StringData* s) {
@@ -93,19 +113,24 @@ cnbt_Status cnbt__read_string(cnbt__ReadCtx* ctx, cnbt__StringData* s) {
   assert(s);
 
   cnbt_Status ret;
-  uint16_t sz;
-  size_t read = ctx->cbs.read(&sz, sizeof(sz), 1, ctx->src);
+
+  union {
+    i16 read_size;
+    u16 size;
+  } u;
+
+  ret = cnbt__read_short(ctx, &u.read_size);
+  if (ret) {
+    return ret;
+  }
+  char* str = CNBT_MALLOC(u.size + 1);
+  size_t read = ctx->cbs.read(str, sizeof(*str), u.size, ctx->src);
   if (!read) {
     return CNBT_EOF;
   }
-  char* str = CNBT_MALLOC(sz + 1);
-  read = ctx->cbs.read(str, sizeof(*str), sz, ctx->src);
-  if (!read) {
-    return CNBT_EOF;
-  }
-  str[sz] = '\0';
+  str[u.size] = '\0';
   s->data = str;
-  s->size = (u32)sz;
+  s->size = (u32)u.size;
   return CNBT_OK;
 }
 
@@ -114,7 +139,8 @@ cnbt_Status cnbt__read_blob(cnbt__ReadCtx* ctx, cnbt__ByteArrayData* d) {
   assert(d);
 
   cnbt_Status ret;
-  int32_t sz;
+
+  i32 sz;
   ret = cnbt__read_int(ctx, &sz);
   if (ret) {
     return ret;
@@ -124,8 +150,13 @@ cnbt_Status cnbt__read_blob(cnbt__ReadCtx* ctx, cnbt__ByteArrayData* d) {
     ret = CNBT_ALLOC_FAILED;
     return ret;
   }
+  size_t read = ctx->cbs.read(blob, sizeof(*blob), sz, ctx->src);
+  if (!read) {
+    CNBT_FREE(blob);
+    return CNBT_EOF;
+  }
   d->data = blob;
-  d->size = (uint32_t)sz;
+  d->size = (u32)sz;
   return ret;
 }
 
@@ -182,7 +213,7 @@ cnbt_Status cnbt__read_list(cnbt__ReadCtx* ctx, cnbt__ListData* d) {
     goto list_cleanup;
   }
 
-  int32_t sz;
+  i32 sz;
   ret = cnbt__read_int(ctx, &sz);
   if (ret) {
     goto list_cleanup;
@@ -193,7 +224,7 @@ cnbt_Status cnbt__read_list(cnbt__ReadCtx* ctx, cnbt__ListData* d) {
   }
 
   if (type != CNBT_TYPE_END) {
-    for (int32_t i = 0; i < sz; ++i) {
+    for (i32 i = 0; i < sz; ++i) {
       cnbt_Tag value;
       ret = read_data(ctx, &value, type);
       if (ret) {
@@ -247,7 +278,8 @@ compound_clean:
   return ret;
 }
 
-CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs) {
+CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, cnbt_EndianMode mode, void* src,
+                               const cnbt_IoFunc* cbs) {
   if (!tag || !cbs) {
     return CNBT_INVALID_DATA;
   }
@@ -258,6 +290,7 @@ CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs)
   cnbt__ReadCtx ctx;
   ctx.src = src;
   ctx.cbs = *cbs;
+  ctx.endian_mode = mode;
   long start_pos = -1;
   if (cbs->tell) {
     start_pos = cbs->tell(src);
@@ -282,7 +315,8 @@ read_err:
   return ret;
 }
 
-CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* cbs) {
+CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, cnbt_EndianMode mode, void* src,
+                                const cnbt_IoFunc* cbs) {
   // TODO
   return CNBT_OK;
 }
