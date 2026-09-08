@@ -20,6 +20,7 @@
 
 #define CNBT_MAX_STRING_SIZE 0xFFFF
 #define CNBT_MAX_LIST_SIZE   0x7FFFFFFF
+#define CNBT_ZLEVEL          47
 
 #define CNBT_SEEK_SET 0
 #define CNBT_SEEK_CUR 1
@@ -34,7 +35,6 @@ typedef enum cnbt_Status {
   CNBT_INVALID_DATA,
   CNBT_ALLOC_FAILED,
   CNBT_EOF,
-  CNBT_ZLIB_ERROR,
 } cnbt_Status;
 
 typedef enum cnbt_Type {
@@ -55,6 +55,11 @@ typedef enum cnbt_EndianMode {
   CNBT_BIG_ENDIAN = 0,
   CNBT_LITTLE_ENDIAN,
 } cnbt_EndianMode;
+
+typedef enum cnbt_ZIoMode {
+  CNBT_ZREAD = 0,
+  CNBT_ZWRITE,
+} cnbt_ZIoMode;
 
 #ifdef CNBT__INTERNAL
 typedef struct cnbt_Tag cnbt_Tag;
@@ -78,12 +83,14 @@ typedef size_t (*PFN_cnbt_read_func)(void* buff, size_t sz, size_t nmemb, void* 
 typedef size_t (*PFN_cnbt_write_func)(const void* buff, size_t sz, size_t nmemb, void* src);
 typedef int (*PFN_cnbt_seek_func)(void* src, long offset, int origin);
 typedef long (*PFN_cnbt_tell_func)(void* src);
+typedef int (*PFN_cnbt_eof_func)(void* src);
 
 typedef struct cnbt_IoFunc {
   PFN_cnbt_read_func read;
   PFN_cnbt_write_func write;
   PFN_cnbt_seek_func seek;
   PFN_cnbt_tell_func tell;
+  PFN_cnbt_eof_func eof;
 } cnbt_IoFunc;
 
 typedef cnbt_Tag cnbt_End;
@@ -151,10 +158,14 @@ CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, cnbt_EndianMode mode, void*
                                 const cnbt_IoFunc* func);
 CNBT_API cnbt_Status cnbt_write_pretty(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* func);
 
-CNBT_API cnbt_Status cnbt_make_zstream(cnbt_ZStream* zstr, size_t buffsz, void* src,
-                                       const cnbt_IoFunc* func);
-CNBT_API void cnbt_free_zstream(cnbt_ZStream zstr);
-CNBT_API void cnbt_load_zstream_funcs(cnbt_ZStream zstr, cnbt_IoFunc* func);
+CNBT_API cnbt_Status cnbt_zopen(cnbt_ZStream* zstr, cnbt_ZIoMode mode, int zlevel, void* src,
+                                const cnbt_IoFunc* cbs);
+CNBT_API cnbt_Status cnbt_zclose(cnbt_ZStream zstr);
+CNBT_API size_t cnbt_zread(void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr);
+CNBT_API size_t cnbt_zwrite(const void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr);
+CNBT_API long cnbt_ztell(cnbt_ZStream zstr);
+CNBT_API int cnbt_zseek(cnbt_ZStream zstr, long offset, int origin);
+CNBT_API int cnbt_zflush(cnbt_ZStream zstr);
 
 #ifdef __cplusplus
 } // extern "C"

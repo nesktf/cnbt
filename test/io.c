@@ -20,11 +20,15 @@ static size_t write_func(const void* buff, size_t sz, size_t nmemb, BuffCtx* ctx
   return nmemb;
 }
 
+static int eof_func(BuffCtx* ctx) {
+  return ctx->pos == sizeof(ctx->data);
+}
+
 static cnbt_IoFunc BUFFER_CBS = {
   .read = (PFN_cnbt_read_func)read_func,
   .write = (PFN_cnbt_write_func)write_func,
   .seek = NULL,
-  .tell = NULL,
+  .eof = (PFN_cnbt_eof_func)eof_func,
 };
 
 static void* test_read_endianness_big_setup(const MunitParameter* params, void* data) {
@@ -245,7 +249,6 @@ static cnbt_IoFunc FILE_CBS = {
   .read = (PFN_cnbt_read_func)fread,
   .write = (PFN_cnbt_write_func)fwrite,
   .seek = (PFN_cnbt_seek_func)fseek,
-  .tell = (PFN_cnbt_tell_func)ftell,
 };
 
 static cnbt_Status read_compound(const char* path, cnbt_Compound* comp, cnbt_EndianMode mode) {

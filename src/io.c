@@ -295,7 +295,6 @@ CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, cnbt_EndianMode mode, void* src,
   if (cbs->tell) {
     start_pos = cbs->tell(src);
   }
-
   cnbt_Status ret;
   cnbt_Type type;
   ret = cnbt__read_type(&ctx, &type);
