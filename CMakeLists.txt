@@ -9,7 +9,7 @@ set(CNBT_VER "${CNBT_VER_MAJ}.${CNBT_VER_MIN}.${CNBT_VER_REV}")
 
 option(CNBT_SHARED_BUILD "Shared object build" OFF)
 option(CNBT_BUILD_TESTS "Build tests" OFF)
-option(CNBT_ENABLE_ZLIB "Build zlib stream functions" ON)
+#option(CNBT_ENABLE_ZLIB "Build zlib stream functions" ON)
 
 set(CNBT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CNBT_SOURCE_DIR "${CNBT_DIR}/src")
@@ -35,13 +35,13 @@ set(CNBT_SOURCES_ZLIB
 list(APPEND CNBT_INCLUDE ${CNBT_INCLUDE_DIR})
 set(CNBT_HEADERS "${CNBT_INCLUDE_DIR}/cnbt/cnbt.h")
 
-if(CNBT_ENABLE_ZLIB)
+#if(CNBT_ENABLE_ZLIB)
   find_package(ZLIB REQUIRED)
   list(APPEND CNBT_LINK ${ZLIB_LIBRARY})
   list(APPEND CNBT_INCLUDE ${ZLIB_INCLUDE_DIRS})
   list(APPEND CNBT_SOURCES ${CNBT_SOURCES_ZLIB})
   list(APPEND CNBT_DEFS -DCNBT_HAS_ZLIB)
-endif()
+#endif()
 
 add_library(${PROJECT_NAME} ${CNBT_BUILD_TYPE})
 target_sources(${PROJECT_NAME} PRIVATE ${CNBT_SOURCES})
