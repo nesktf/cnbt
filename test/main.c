@@ -10,14 +10,20 @@ static void add_tests(TestData test, MunitTest* tests, size_t* pos) {
 
 int main(int argc, char* argv[]) {
   size_t len = 1; // One extra for the null terminator
-  len += data_tests.len;
+  len += tag_tests.len;
   len += io_tests.len;
+  len += zstream_tests.len;
+  len += formatter_tests.len;
+  len += filestream_tests.len;
 
   MunitTest* tests = malloc(len * sizeof(*tests));
   memset(tests, 0x00, len * sizeof(*tests));
   size_t pos = 0;
-  add_tests(data_tests, tests, &pos);
+  add_tests(tag_tests, tests, &pos);
   add_tests(io_tests, tests, &pos);
+  add_tests(zstream_tests, tests, &pos);
+  add_tests(formatter_tests, tests, &pos);
+  add_tests(filestream_tests, tests, &pos);
 
   const MunitSuite suite = {
     .prefix = "/cnbt-tests",

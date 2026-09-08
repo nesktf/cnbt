@@ -88,7 +88,7 @@ cnbt_Status cnbt__read_long(cnbt__ReadCtx* ctx, i64* num);
 cnbt_Status cnbt__read_float(cnbt__ReadCtx* ctx, f32* num);
 cnbt_Status cnbt__read_double(cnbt__ReadCtx* ctx, f64* num);
 cnbt_Status cnbt__read_string(cnbt__ReadCtx* ctx, cnbt__StringData* str);
-cnbt_Status cnbt__read_blob(cnbt__ReadCtx* ctx, cnbt__ByteArrayData* arr);
+cnbt_Status cnbt__read_byte_array(cnbt__ReadCtx* ctx, cnbt__ByteArrayData* arr);
 cnbt_Status cnbt__read_list(cnbt__ReadCtx* ctx, cnbt__ListData* list);
 cnbt_Status cnbt__read_compound(cnbt__ReadCtx* ctx, cnbt__CompoundData* comp);
 

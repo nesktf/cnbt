@@ -26,12 +26,11 @@ project(cnbt VERSION ${CNBT_VER} LANGUAGES C)
 
 set(CNBT_SOURCES
   "${CNBT_SOURCE_DIR}/tag.c"
-  "${CNBT_SOURCE_DIR}/list.c"
   "${CNBT_SOURCE_DIR}/io.c"
-  "${CNBT_SOURCE_DIR}/format.c"
+  "${CNBT_SOURCE_DIR}/formatter.c"
 )
 set(CNBT_SOURCES_ZLIB
-  "${CNBT_SOURCE_DIR}/zlib_io.c"
+  "${CNBT_SOURCE_DIR}/zstream.c"
 )
 list(APPEND CNBT_INCLUDE ${CNBT_INCLUDE_DIR})
 set(CNBT_HEADERS "${CNBT_INCLUDE_DIR}/cnbt/cnbt.h")

@@ -134,7 +134,7 @@ cnbt_Status cnbt__read_string(cnbt__ReadCtx* ctx, cnbt__StringData* s) {
   return CNBT_OK;
 }
 
-cnbt_Status cnbt__read_blob(cnbt__ReadCtx* ctx, cnbt__ByteArrayData* d) {
+cnbt_Status cnbt__read_byte_array(cnbt__ReadCtx* ctx, cnbt__ByteArrayData* d) {
   assert(ctx);
   assert(d);
 
@@ -186,7 +186,7 @@ static cnbt_Status read_data(cnbt__ReadCtx* ctx, cnbt_Tag* data, cnbt_Type type)
       ret = cnbt__read_double(ctx, &data->as_f64);
     } break;
     case CNBT_TYPE_BYTE_ARRAY: {
-      ret = cnbt__read_blob(ctx, &data->as_bytearr);
+      ret = cnbt__read_byte_array(ctx, &data->as_bytearr);
     } break;
     case CNBT_TYPE_STRING: {
       ret = cnbt__read_string(ctx, &data->as_string);

@@ -159,12 +159,12 @@ static MunitResult test_compound_init(const MunitParameter* params, void* data) 
 }
 
 static MunitTest tests[] = {
-  {"/primitive-init", test_primitive_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
-  {"/list-init", test_list_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
-  {"/compound-init", test_compound_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
+  {"/tag/primitive-init", test_primitive_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
+  {"/tag/list-init", test_list_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
+  {"/tag/compound-init", test_compound_init, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
 };
 
-TestData data_tests = {
+TestData tag_tests = {
   .tests = tests,
   .len = ARRSZ(tests),
 };
