@@ -20,11 +20,15 @@
 
 #define CNBT_MAX_STRING_SIZE 0xFFFF
 #define CNBT_MAX_LIST_SIZE   0x7FFFFFFF
-#define CNBT_ZLEVEL          47
 
 #define CNBT_SEEK_SET 0
 #define CNBT_SEEK_CUR 1
 #define CNBT_SEEK_END 2
+
+#define CNBT_ZDEFAULT_LEVEL -1
+#define CNBT_ZDEFAULT_WINDOW_BITS 15
+#define CNBT_ZDEFAULT_MEM_LEVEL 8
+#define CNBT_ZDEFAULT_STRATEGY  0
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,11 +59,6 @@ typedef enum cnbt_EndianMode {
   CNBT_BIG_ENDIAN = 0,
   CNBT_LITTLE_ENDIAN,
 } cnbt_EndianMode;
-
-typedef enum cnbt_ZIoMode {
-  CNBT_ZREAD = 0,
-  CNBT_ZWRITE,
-} cnbt_ZIoMode;
 
 #ifdef CNBT__INTERNAL
 typedef struct cnbt_Tag cnbt_Tag;
@@ -106,6 +105,13 @@ typedef cnbt_Tag cnbt_List;
 typedef cnbt_Tag cnbt_Compound;
 
 typedef struct cnbt_ZStream_T* cnbt_ZStream;
+
+typedef struct cnbt_ZWriteArgs {
+  int level;
+  int window_bits;
+  int mem_level;
+  int strategy;
+} cnbt_ZWriteArgs;
 
 CNBT_API const char* cnbt_tag_name(cnbt_Type type);
 CNBT_API void cnbt_free(cnbt_Tag* tag);
@@ -172,8 +178,10 @@ CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, cnbt_EndianMode mode, void*
                                 const cnbt_IoFunc* func);
 CNBT_API cnbt_Status cnbt_write_pretty(const cnbt_Tag* tag, void* src, const cnbt_IoFunc* func);
 
-CNBT_API cnbt_Status cnbt_zopen(cnbt_ZStream* zstr, cnbt_ZIoMode mode, int zlevel, void* src,
-                                const cnbt_IoFunc* cbs);
+CNBT_API cnbt_Status cnbt_zopen_read(cnbt_ZStream* zstr, int window_bits, void* src,
+                                     const cnbt_IoFunc* cbs);
+CNBT_API cnbt_Status cnbt_zopen_write(cnbt_ZStream* zstr, const cnbt_ZWriteArgs* args, void* src,
+                                      const cnbt_IoFunc* cbs);
 CNBT_API cnbt_Status cnbt_zclose(cnbt_ZStream zstr);
 CNBT_API size_t cnbt_zread(void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr);
 CNBT_API size_t cnbt_zwrite(const void* buff, size_t sz, size_t nmemb, cnbt_ZStream zstr);

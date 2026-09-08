@@ -6,6 +6,11 @@
 
 #define Z_CHUNKSIZE 16384
 
+typedef enum cnbt_ZIoMode {
+  CNBT_ZREAD = 0,
+  CNBT_ZWRITE,
+} cnbt_ZIoMode;
+
 typedef struct cnbt_ZStream_T {
   Bytef buff[Z_CHUNKSIZE];
   z_stream str;
@@ -26,43 +31,68 @@ static void zfree(void* user, void* p) {
   CNBT_FREE(p);
 }
 
-CNBT_API cnbt_Status cnbt_zopen(cnbt_ZStream* zstr, cnbt_ZIoMode mode, int zlevel, void* src,
-                                const cnbt_IoFunc* cbs) {
+static cnbt_ZStream init_zstream(cnbt_Status* err, cnbt_ZIoMode mode, void* src,
+                                 const cnbt_IoFunc* cbs) {
   if (!cbs) {
-    return CNBT_INVALID_DATA;
+    *err = CNBT_INVALID_DATA;
+    return NULL;
   }
   if (mode == CNBT_ZREAD && (!cbs->read || !cbs->eof)) {
-    return CNBT_INVALID_DATA;
+    *err = CNBT_INVALID_DATA;
+    return NULL;
   }
   if (mode == CNBT_ZWRITE && (!cbs->write)) {
-    return CNBT_INVALID_DATA;
+    *err = CNBT_INVALID_DATA;
+    return NULL;
   }
 
-  cnbt_ZStream ret = CNBT_MALLOC(sizeof(**zstr));
+  cnbt_ZStream ret = CNBT_MALLOC(sizeof(*ret));
   if (!ret) {
-    return CNBT_ALLOC_FAILED;
+    *err = CNBT_ALLOC_FAILED;
+    return NULL;
   }
   ret->cbs = *cbs;
   ret->src = src;
   ret->mode = mode;
   ret->offset = 0;
   ret->eof = 0;
-
   ret->str.zalloc = &zalloc;
   ret->str.zfree = &zfree;
   ret->str.opaque = Z_NULL;
+  return ret;
+}
 
-  if (mode == CNBT_ZREAD) {
-    inflateInit2(&ret->str, zlevel);
-    ret->str.avail_in = 0;
-    ret->str.next_in = Z_NULL;
-  } else {
-    deflateInit(&ret->str, zlevel);
-    ret->str.next_out = ret->buff;
-    ret->str.avail_out = Z_CHUNKSIZE;
+CNBT_API cnbt_Status cnbt_zopen_read(cnbt_ZStream* zstr, int window_bits, void* src,
+                                     const cnbt_IoFunc* cbs) {
+  cnbt_Status ret = CNBT_OK;
+  cnbt_ZStream out = init_zstream(&ret, CNBT_ZREAD, src, cbs);
+  if (ret == CNBT_OK) {
+    inflateInit2(&out->str, window_bits);
+    out->str.avail_in = 0;
+    out->str.next_in = Z_NULL;
+    *zstr = out;
   }
-  *zstr = ret;
-  return CNBT_OK;
+  return ret;
+}
+
+CNBT_API cnbt_Status cnbt_zopen_write(cnbt_ZStream* zstr, const cnbt_ZWriteArgs* args, void* src,
+                                      const cnbt_IoFunc* cbs) {
+  cnbt_Status ret = CNBT_OK;
+  cnbt_ZStream out = init_zstream(&ret, CNBT_ZWRITE, src, cbs);
+  static_assert(CNBT_ZDEFAULT_LEVEL == Z_DEFAULT_COMPRESSION, "Z_DEFAULT_COMPRESSION mismatch");
+  static_assert(CNBT_ZDEFAULT_STRATEGY == Z_DEFAULT_STRATEGY, "Z_DEFAULT_COMPRESSION mismatch");
+  if (ret == CNBT_OK) {
+    deflateInit2(&out->str,
+                 args ? args->level : CNBT_ZDEFAULT_LEVEL,
+                 Z_DEFLATED,
+                 args ? args->window_bits : CNBT_ZDEFAULT_WINDOW_BITS,
+                 args ? args->mem_level : CNBT_ZDEFAULT_MEM_LEVEL,
+                 args ? args->strategy : CNBT_ZDEFAULT_STRATEGY);
+    out->str.next_out = out->buff;
+    out->str.avail_out = Z_CHUNKSIZE;
+    *zstr = out;
+  }
+  return ret;
 }
 
 CNBT_API cnbt_Status cnbt_zclose(cnbt_ZStream zstr) {
@@ -74,7 +104,7 @@ CNBT_API cnbt_Status cnbt_zclose(cnbt_ZStream zstr) {
   if (zstr->mode == CNBT_ZWRITE) {
     ret = cnbt_zflush(zstr) == -1 ? CNBT_EOF : CNBT_OK;
     deflateEnd(&zstr->str);
-  } else if (zstr->mode == 1) {
+  } else if (zstr->mode == CNBT_ZREAD) {
     inflateEnd(&zstr->str);
   }
 
@@ -160,7 +190,6 @@ CNBT_API int cnbt_zseek(cnbt_ZStream zstr, long offset, int origin) {
   }
 
   if (offset < zstr->offset) {
-    rewind(zstr->src);
     zstr->cbs.seek(zstr->src, 0, CNBT_SEEK_SET);
     inflateReset(&zstr->str);
     zstr->str.avail_in = 0;

@@ -1,14 +1,22 @@
 #include "tests.h"
 
 static size_t mem_read_func(void* buff, size_t sz, size_t nmemb, BuffCtx* ctx) {
-  memcpy(buff, ctx->data + ctx->pos, sz * nmemb);
-  ctx->pos += sz * nmemb;
+  size_t total = sz * nmemb;
+  if (total > sizeof(ctx->data)) {
+    total = sizeof(ctx->data);
+  }
+  memcpy(buff, ctx->data + ctx->pos, total);
+  ctx->pos += total;
   return nmemb;
 }
 
 static size_t mem_write_func(const void* buff, size_t sz, size_t nmemb, BuffCtx* ctx) {
-  memcpy(ctx->data + ctx->pos, buff, sz * nmemb);
-  ctx->pos += sz * nmemb;
+  size_t total = sz * nmemb;
+  if (total > sizeof(ctx->data)) {
+    total = sizeof(ctx->data);
+  }
+  memcpy(ctx->data + ctx->pos, buff, total);
+  ctx->pos += total;
   return nmemb;
 }
 
