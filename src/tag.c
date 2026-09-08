@@ -208,7 +208,9 @@ void cnbt__free_list(cnbt__ListData* list) {
     return;
   }
   for (size_t i = 0; i < stbds_arrlenu(list->data); ++i) {
-    cnbt_free(list->data + i);
+    if (!list->data[i].is_view) {
+      cnbt_free(list->data + i);
+    }
   }
   stbds_arrfree(list->data);
 }
@@ -231,6 +233,11 @@ CNBT_API cnbt_Tag* cnbt_list_push(cnbt_List* list, cnbt_Tag tag) {
   return list->as_list.data + stbds_arrlen(list->as_list.data) - 1;
 }
 
+CNBT_API cnbt_Tag* cnbt_list_push_view(cnbt_List* list, cnbt_Tag tag) {
+  tag.is_view = 1;
+  return cnbt_list_push(list, tag);
+}
+
 CNBT_API size_t cnbt_list_len(const cnbt_List* list) {
   return list ? list->type == CNBT_TYPE_LIST ? stbds_arrlen(list->as_list.data) : 0 : 0;
 }
@@ -242,7 +249,7 @@ CNBT_API cnbt_Tag* cnbt_list_get_unchecked(const cnbt_List* list, size_t pos) {
   return list->as_list.data + pos;
 }
 
-CNBT_API cnbt_Tag* cnbt_list_get(const cnbt_List* list, size_t pos) {
+CNBT_API cnbt_Tag* cnbt_list_get(cnbt_List* list, size_t pos) {
   if (!list) {
     return NULL;
   }
@@ -253,6 +260,10 @@ CNBT_API cnbt_Tag* cnbt_list_get(const cnbt_List* list, size_t pos) {
     return NULL;
   }
   return list->as_list.data + pos;
+}
+
+CNBT_API cnbt_Tag* cnbt_list_data(cnbt_List* list) {
+  return list ? list->as_list.data : NULL;
 }
 
 CNBT_API cnbt_Status cnbt_make_compound(cnbt_Compound* comp) {
@@ -269,7 +280,9 @@ void cnbt__free_compound(cnbt__CompoundData* comp) {
     return;
   }
   for (size_t i = 0; i < stbds_shlenu(comp->data); ++i) {
-    cnbt_free(&comp->data[i].value);
+    if (!comp->data[i].value.is_view) {
+      cnbt_free(&comp->data[i].value);
+    }
   }
   stbds_shfree(comp->data);
 }
@@ -285,6 +298,11 @@ CNBT_API cnbt_KeyTag* cnbt_comp_insert(cnbt_Compound* comp, const char* key, cnb
   return shgetp_null(comp->as_compound.data, key);
 }
 
+CNBT_API cnbt_KeyTag* cnbt_comp_insert_view(cnbt_Compound* comp, const char* key, cnbt_Tag tag) {
+  tag.is_view = 1;
+  return cnbt_comp_insert(comp, key, tag);
+}
+
 CNBT_API size_t cnbt_comp_len(const cnbt_Compound* comp) {
   if (!comp) {
     return 0;
@@ -292,13 +310,16 @@ CNBT_API size_t cnbt_comp_len(const cnbt_Compound* comp) {
   return stbds_shlenu(comp->as_compound.data);
 }
 
-CNBT_API cnbt_KeyTag* cnbt_comp_get(const cnbt_Compound* comp, const char* key) {
+CNBT_API cnbt_KeyTag* cnbt_comp_get(cnbt_Compound* comp, const char* key) {
   if (!comp || !key) {
     return NULL;
   }
   if (comp->type != CNBT_TYPE_COMPOUND) {
     return NULL;
   }
-  cnbt_KeyTag* tags = (cnbt_KeyTag*)comp->as_compound.data;
-  return shgetp_null(tags, key);
+  return shgetp_null(comp->as_compound.data, key);
+}
+
+CNBT_API cnbt_KeyTag* cnbt_comp_data(cnbt_Compound* comp) {
+  return comp ? comp->as_compound.data : NULL;
 }

@@ -143,14 +143,28 @@ CNBT_API int8_t* cnbt_byte_array_data(const cnbt_ByteArray* arr);
 CNBT_API cnbt_Status cnbt_make_list(cnbt_List* list);
 CNBT_API cnbt_Status cnbt_make_list_fill(cnbt_List* list, cnbt_Tag* data, size_t n);
 CNBT_API cnbt_Tag* cnbt_list_push(cnbt_List* list, cnbt_Tag tag);
+CNBT_API cnbt_Tag* cnbt_list_push_view(cnbt_List* list, cnbt_Tag tag);
 CNBT_API size_t cnbt_list_len(const cnbt_List* list);
-CNBT_API cnbt_Tag* cnbt_list_get(const cnbt_List* list, size_t pos);
+CNBT_API cnbt_Tag* cnbt_list_get(cnbt_List* list, size_t pos);
 CNBT_API cnbt_Tag* cnbt_list_get_unchecked(const cnbt_List* list, size_t pos);
+CNBT_API cnbt_Tag* cnbt_list_data(cnbt_List* list);
+
+#define cnbt_list_each(list, tagname) \
+  for (cnbt_Tag *tagname = cnbt_list_data(list), \
+                *tagname##__end = cnbt_list_data(list)+cnbt_list_len(list); \
+       tagname != tagname##__end; ++tagname)
 
 CNBT_API cnbt_Status cnbt_make_compound(cnbt_Compound* comp);
 CNBT_API cnbt_KeyTag* cnbt_comp_insert(cnbt_Compound* comp, const char* key, cnbt_Tag tag);
+CNBT_API cnbt_KeyTag* cnbt_comp_insert_view(cnbt_Compound* comp, const char* key, cnbt_Tag tag);
 CNBT_API size_t cnbt_comp_len(const cnbt_Compound* comp);
-CNBT_API cnbt_KeyTag* cnbt_comp_get(const cnbt_Compound* comp, const char* key);
+CNBT_API cnbt_KeyTag* cnbt_comp_get(cnbt_Compound* comp, const char* key);
+CNBT_API cnbt_KeyTag* cnbt_comp_data(cnbt_Compound* comp);
+
+#define cnbt_comp_each(comp, ktagname) \
+  for (cnbt_KeyTag *ktagname = cnbt_comp_data(comp), \
+                   *ktagname##__end = cnbt_comp_data(comp)+cnbt_comp_len(comp); \
+       ktagname != ktagname##__end; ++ktagname)
 
 CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, cnbt_EndianMode mode, void* src,
                                const cnbt_IoFunc* func);

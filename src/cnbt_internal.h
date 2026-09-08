@@ -49,6 +49,7 @@ typedef struct cnbt__CompoundData {
 
 struct cnbt_Tag {
   u32 type;
+  int is_view;
 
   union {
     i8 as_i8;
