@@ -25,10 +25,12 @@
 #define CNBT_SEEK_CUR 1
 #define CNBT_SEEK_END 2
 
-#define CNBT_ZDEFAULT_LEVEL -1
+#define CNBT_ZDEFAULT_LEVEL       -1
 #define CNBT_ZDEFAULT_WINDOW_BITS 15
-#define CNBT_ZDEFAULT_MEM_LEVEL 8
-#define CNBT_ZDEFAULT_STRATEGY  0
+#define CNBT_ZGZIP_WINDOW_BITS    31
+#define CNBT_ZAUTO_WINDOW_BITS    47
+#define CNBT_ZDEFAULT_MEM_LEVEL   8
+#define CNBT_ZDEFAULT_STRATEGY    0
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,6 +55,8 @@ typedef enum cnbt_Type {
   CNBT_TYPE_STRING,
   CNBT_TYPE_LIST,
   CNBT_TYPE_COMPOUND,
+  CNBT_TYPE_INT_ARRAY,
+  CNBT_TYPE_LONG_ARRAY,
 } cnbt_Type;
 
 typedef enum cnbt_EndianMode {
@@ -103,6 +107,8 @@ typedef cnbt_Tag cnbt_String;
 typedef cnbt_Tag cnbt_ByteArray;
 typedef cnbt_Tag cnbt_List;
 typedef cnbt_Tag cnbt_Compound;
+typedef cnbt_Tag cnbt_IntArray;
+typedef cnbt_Tag cnbt_LongArray;
 
 typedef struct cnbt_ZStream_T* cnbt_ZStream;
 
@@ -115,6 +121,7 @@ typedef struct cnbt_ZWriteArgs {
 
 CNBT_API const char* cnbt_tag_name(cnbt_Type type);
 CNBT_API void cnbt_free(cnbt_Tag* tag);
+CNBT_API cnbt_Status cnbt_clone(cnbt_Tag* dst, const cnbt_Tag* src);
 CNBT_API cnbt_Type cnbt_get_type(const cnbt_Tag* tag);
 
 CNBT_API void cnbt_make_end(cnbt_End* tag);
@@ -146,6 +153,14 @@ CNBT_API cnbt_Status cnbt_make_byte_array(cnbt_ByteArray* arr, const void* data,
 CNBT_API size_t cnbt_byte_array_len(const cnbt_ByteArray* arr);
 CNBT_API int8_t* cnbt_byte_array_data(const cnbt_ByteArray* arr);
 
+CNBT_API cnbt_Status cnbt_make_int_array(cnbt_IntArray* arr, const int32_t* data, size_t n);
+CNBT_API size_t cnbt_int_array_len(const cnbt_IntArray* arr);
+CNBT_API int32_t* cnbt_int_array_data(const cnbt_IntArray* arr);
+
+CNBT_API cnbt_Status cnbt_make_long_array(cnbt_LongArray* arr, const int64_t* data, size_t n);
+CNBT_API size_t cnbt_long_array_len(const cnbt_LongArray* arr);
+CNBT_API int64_t* cnbt_long_array_data(const cnbt_LongArray* arr);
+
 CNBT_API cnbt_Status cnbt_make_list(cnbt_List* list);
 CNBT_API cnbt_Status cnbt_make_list_fill(cnbt_List* list, cnbt_Tag* data, size_t n);
 CNBT_API cnbt_Tag* cnbt_list_push(cnbt_List* list, cnbt_Tag tag);
@@ -155,9 +170,9 @@ CNBT_API cnbt_Tag* cnbt_list_get(cnbt_List* list, size_t pos);
 CNBT_API cnbt_Tag* cnbt_list_get_unchecked(const cnbt_List* list, size_t pos);
 CNBT_API cnbt_Tag* cnbt_list_data(cnbt_List* list);
 
-#define cnbt_list_each(list, tagname) \
-  for (cnbt_Tag *tagname = cnbt_list_data(list), \
-                *tagname##__end = cnbt_list_data(list)+cnbt_list_len(list); \
+#define cnbt_list_each(list, tagname)                                          \
+  for (cnbt_Tag* tagname = cnbt_list_data(list),                               \
+                 *tagname##__end = cnbt_list_data(list) + cnbt_list_len(list); \
        tagname != tagname##__end; ++tagname)
 
 CNBT_API cnbt_Status cnbt_make_compound(cnbt_Compound* comp);
@@ -167,9 +182,9 @@ CNBT_API size_t cnbt_comp_len(const cnbt_Compound* comp);
 CNBT_API cnbt_KeyTag* cnbt_comp_get(cnbt_Compound* comp, const char* key);
 CNBT_API cnbt_KeyTag* cnbt_comp_data(cnbt_Compound* comp);
 
-#define cnbt_comp_each(comp, ktagname) \
-  for (cnbt_KeyTag *ktagname = cnbt_comp_data(comp), \
-                   *ktagname##__end = cnbt_comp_data(comp)+cnbt_comp_len(comp); \
+#define cnbt_comp_each(comp, ktagname)                                             \
+  for (cnbt_KeyTag* ktagname = cnbt_comp_data(comp),                               \
+                    *ktagname##__end = cnbt_comp_data(comp) + cnbt_comp_len(comp); \
        ktagname != ktagname##__end; ++ktagname)
 
 CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, cnbt_EndianMode mode, void* src,

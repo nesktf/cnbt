@@ -123,6 +123,38 @@ static void write_pretty_tag(PrettyCtx* ctx, const cnbt_Tag* tag) {
       write_indent(ctx->src, ctx->cbs, ctx->indent);
       COMP_WRITECHAR(2, 2); // "}\n"
     } break;
+    case CNBT_TYPE_INT_ARRAY: {
+      const size_t sz = tag->as_intarr.size;
+      if (sz == 0) {
+        LIST_WRITECHAR(0, 3);
+        return;
+      }
+      LIST_WRITECHAR(0, 1);
+      for (size_t i = 0; i < sz; ++i) {
+        c = snprintf(ctx->buff, sizeof(ctx->buff), "%di", tag->as_intarr.data[i]);
+        ctx->cbs->write(ctx->buff, sizeof(ctx->buff[0]), c, ctx->src);
+        if (i < sz - 1) {
+          LIST_WRITECHAR(3, 2);
+        }
+      }
+      LIST_WRITECHAR(1, 1);
+    } break;
+    case CNBT_TYPE_LONG_ARRAY: {
+      const size_t sz = tag->as_longarr.size;
+      if (sz == 0) {
+        LIST_WRITECHAR(0, 3);
+        return;
+      }
+      LIST_WRITECHAR(0, 1);
+      for (size_t i = 0; i < sz; ++i) {
+        c = snprintf(ctx->buff, sizeof(ctx->buff), "%ldl", (long)tag->as_longarr.data[i]);
+        ctx->cbs->write(ctx->buff, sizeof(ctx->buff[0]), c, ctx->src);
+        if (i < sz - 1) {
+          LIST_WRITECHAR(3, 2);
+        }
+      }
+      LIST_WRITECHAR(1, 1);
+    } break;
     default:
       break;
   }

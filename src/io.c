@@ -9,7 +9,7 @@ cnbt_Status cnbt__read_type(cnbt__ReadCtx* ctx, cnbt_Type* type) {
   if (!read) {
     return CNBT_EOF;
   }
-  if (tag < CNBT_TYPE_END || tag > CNBT_TYPE_COMPOUND) {
+  if (tag < CNBT_TYPE_END || tag > CNBT_TYPE_LONG_ARRAY) {
     return CNBT_INVALID_DATA;
   }
   *type = tag;
@@ -124,9 +124,15 @@ cnbt_Status cnbt__read_string(cnbt__ReadCtx* ctx, cnbt__StringData* s) {
     return ret;
   }
   char* str = CNBT_MALLOC(u.size + 1);
-  size_t read = ctx->cbs.read(str, sizeof(*str), u.size, ctx->src);
-  if (!read) {
-    return CNBT_EOF;
+  if (!str) {
+    return CNBT_ALLOC_FAILED;
+  }
+  if (u.size > 0) {
+    size_t read = ctx->cbs.read(str, sizeof(*str), u.size, ctx->src);
+    if (read != u.size) {
+      CNBT_FREE(str);
+      return CNBT_EOF;
+    }
   }
   str[u.size] = '\0';
   s->data = str;
@@ -145,28 +151,98 @@ cnbt_Status cnbt__read_byte_array(cnbt__ReadCtx* ctx, cnbt__ByteArrayData* d) {
   if (ret) {
     return ret;
   }
-  int8_t* blob = CNBT_MALLOC(sz);
-  if (!blob) {
-    ret = CNBT_ALLOC_FAILED;
-    return ret;
+  if (sz < 0) {
+    return CNBT_INVALID_DATA;
   }
-  size_t read = ctx->cbs.read(blob, sizeof(*blob), sz, ctx->src);
-  if (!read) {
-    CNBT_FREE(blob);
-    return CNBT_EOF;
+  int8_t* blob = NULL;
+  if (sz > 0) {
+    blob = CNBT_MALLOC(sz);
+    if (!blob) {
+      return CNBT_ALLOC_FAILED;
+    }
+    size_t read = ctx->cbs.read(blob, sizeof(*blob), sz, ctx->src);
+    if (read != (size_t)sz) {
+      CNBT_FREE(blob);
+      return CNBT_EOF;
+    }
   }
   d->data = blob;
   d->size = (u32)sz;
-  return ret;
+  return CNBT_OK;
+}
+
+cnbt_Status cnbt__read_int_array(cnbt__ReadCtx* ctx, cnbt__IntArrayData* d) {
+  assert(ctx);
+  assert(d);
+
+  cnbt_Status ret;
+  i32 sz;
+  ret = cnbt__read_int(ctx, &sz);
+  if (ret) {
+    return ret;
+  }
+  if (sz < 0) {
+    return CNBT_INVALID_DATA;
+  }
+  i32* blob = NULL;
+  if (sz > 0) {
+    blob = CNBT_MALLOC(sz * sizeof(i32));
+    if (!blob) {
+      return CNBT_ALLOC_FAILED;
+    }
+    for (i32 i = 0; i < sz; ++i) {
+      ret = cnbt__read_int(ctx, &blob[i]);
+      if (ret) {
+        CNBT_FREE(blob);
+        return ret;
+      }
+    }
+  }
+  d->data = blob;
+  d->size = (u32)sz;
+  return CNBT_OK;
+}
+
+cnbt_Status cnbt__read_long_array(cnbt__ReadCtx* ctx, cnbt__LongArrayData* d) {
+  assert(ctx);
+  assert(d);
+
+  cnbt_Status ret;
+  i32 sz;
+  ret = cnbt__read_int(ctx, &sz);
+  if (ret) {
+    return ret;
+  }
+  if (sz < 0) {
+    return CNBT_INVALID_DATA;
+  }
+  i64* blob = NULL;
+  if (sz > 0) {
+    blob = CNBT_MALLOC(sz * sizeof(i64));
+    if (!blob) {
+      return CNBT_ALLOC_FAILED;
+    }
+    for (i32 i = 0; i < sz; ++i) {
+      ret = cnbt__read_long(ctx, &blob[i]);
+      if (ret) {
+        CNBT_FREE(blob);
+        return ret;
+      }
+    }
+  }
+  d->data = blob;
+  d->size = (u32)sz;
+  return CNBT_OK;
 }
 
 static cnbt_Status read_data(cnbt__ReadCtx* ctx, cnbt_Tag* data, cnbt_Type type) {
-  cnbt_Status ret;
+  cnbt_Status ret = CNBT_OK;
   memset(data, 0x00, sizeof(*data));
   data->type = type;
   switch (type) {
-    case CNBT_TYPE_END:
+    case CNBT_TYPE_END: {
       ret = CNBT_OK;
+    } break;
     case CNBT_TYPE_BYTE: {
       ret = cnbt__read_byte(ctx, &data->as_i8);
     } break;
@@ -196,6 +272,15 @@ static cnbt_Status read_data(cnbt__ReadCtx* ctx, cnbt_Tag* data, cnbt_Type type)
     } break;
     case CNBT_TYPE_COMPOUND: {
       ret = cnbt__read_compound(ctx, &data->as_compound);
+    } break;
+    case CNBT_TYPE_INT_ARRAY: {
+      ret = cnbt__read_int_array(ctx, &data->as_intarr);
+    } break;
+    case CNBT_TYPE_LONG_ARRAY: {
+      ret = cnbt__read_long_array(ctx, &data->as_longarr);
+    } break;
+    default: {
+      ret = CNBT_INVALID_DATA;
     } break;
   }
   return ret;
@@ -251,7 +336,8 @@ cnbt_Status cnbt__read_compound(cnbt__ReadCtx* ctx, cnbt__CompoundData* d) {
   cnbt_Type type;
   cnbt_Status ret = CNBT_OK;
   cnbt_KeyTag* comp = NULL;
-  while (cnbt__read_type(ctx, &type) && type != CNBT_TYPE_END) {
+  stbds_sh_new_strdup(comp);
+  while ((ret = cnbt__read_type(ctx, &type)) == CNBT_OK && type != CNBT_TYPE_END) {
     cnbt_Tag value;
     cnbt__StringData key;
     ret = cnbt__read_string(ctx, &key);
@@ -259,21 +345,27 @@ cnbt_Status cnbt__read_compound(cnbt__ReadCtx* ctx, cnbt__CompoundData* d) {
       goto compound_clean;
     }
     ret = read_data(ctx, &value, type);
-    if (!ret) {
-      stbds_shput(comp, key.data, value);
-    }
-    cnbt__free_string(&key);
     if (ret) {
+      cnbt__free_string(&key);
       goto compound_clean;
     }
+    stbds_shput(comp, key.data, value);
+    cnbt__free_string(&key);
+  }
+  if (ret != CNBT_OK) {
+    goto compound_clean;
   }
   d->data = comp;
   d->size = stbds_shlenu(comp);
-  return ret;
+  return CNBT_OK;
 
 compound_clean:
   if (comp) {
+    d->data = comp;
+    d->size = stbds_shlenu(comp);
     cnbt__free_compound(d);
+    d->data = NULL;
+    d->size = 0;
   }
   return ret;
 }
@@ -301,6 +393,17 @@ CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, cnbt_EndianMode mode, void* src,
   if (ret) {
     goto read_err;
   }
+  if (type == CNBT_TYPE_END) {
+    cnbt_make_end(tag);
+    return CNBT_OK;
+  }
+  cnbt__StringData root_name;
+  ret = cnbt__read_string(&ctx, &root_name);
+  if (ret) {
+    goto read_err;
+  }
+  cnbt__free_string(&root_name);
+
   ret = read_data(&ctx, tag, type);
   if (ret) {
     goto read_err;
@@ -308,14 +411,244 @@ CNBT_API cnbt_Status cnbt_read(cnbt_Tag* tag, cnbt_EndianMode mode, void* src,
   return ret;
 
 read_err:
-  if (cbs->seek && start_pos > 0) {
+  if (cbs->seek && start_pos >= 0) {
     cbs->seek(src, start_pos, CNBT_SEEK_SET); // reset the stream
   }
   return ret;
 }
 
+static cnbt_Status cnbt__write_bytes(cnbt__WriteCtx* ctx, const void* buff, size_t sz) {
+  assert(ctx && ctx->cbs.write);
+  if (sz == 0) {
+    return CNBT_OK;
+  }
+  size_t written = ctx->cbs.write(buff, 1, sz, ctx->src);
+  return written == sz ? CNBT_OK : CNBT_EOF;
+}
+
+cnbt_Status cnbt__write_type(cnbt__WriteCtx* ctx, cnbt_Type type) {
+  uint8_t b = (uint8_t)type;
+  return cnbt__write_bytes(ctx, &b, 1);
+}
+
+cnbt_Status cnbt__write_byte(cnbt__WriteCtx* ctx, i8 val) {
+  return cnbt__write_bytes(ctx, &val, 1);
+}
+
+cnbt_Status cnbt__write_short(cnbt__WriteCtx* ctx, i16 val) {
+  uint8_t buff[2];
+  if (ctx->endian_mode == CNBT_BIG_ENDIAN) {
+    buff[0] = (uint8_t)((val >> 8) & 0xFF);
+    buff[1] = (uint8_t)(val & 0xFF);
+  } else {
+    buff[0] = (uint8_t)(val & 0xFF);
+    buff[1] = (uint8_t)((val >> 8) & 0xFF);
+  }
+  return cnbt__write_bytes(ctx, buff, 2);
+}
+
+cnbt_Status cnbt__write_int(cnbt__WriteCtx* ctx, i32 val) {
+  uint8_t buff[4];
+  if (ctx->endian_mode == CNBT_BIG_ENDIAN) {
+    buff[0] = (uint8_t)((val >> 24) & 0xFF);
+    buff[1] = (uint8_t)((val >> 16) & 0xFF);
+    buff[2] = (uint8_t)((val >> 8) & 0xFF);
+    buff[3] = (uint8_t)(val & 0xFF);
+  } else {
+    buff[0] = (uint8_t)(val & 0xFF);
+    buff[1] = (uint8_t)((val >> 8) & 0xFF);
+    buff[2] = (uint8_t)((val >> 16) & 0xFF);
+    buff[3] = (uint8_t)((val >> 24) & 0xFF);
+  }
+  return cnbt__write_bytes(ctx, buff, 4);
+}
+
+cnbt_Status cnbt__write_long(cnbt__WriteCtx* ctx, i64 val) {
+  uint8_t buff[8];
+  if (ctx->endian_mode == CNBT_BIG_ENDIAN) {
+    for (int i = 7; i >= 0; --i) {
+      buff[7 - i] = (uint8_t)((val >> (i * 8)) & 0xFF);
+    }
+  } else {
+    for (int i = 0; i < 8; ++i) {
+      buff[i] = (uint8_t)((val >> (i * 8)) & 0xFF);
+    }
+  }
+  return cnbt__write_bytes(ctx, buff, 8);
+}
+
+cnbt_Status cnbt__write_float(cnbt__WriteCtx* ctx, f32 val) {
+  union {
+    i32 i;
+    f32 f;
+  } u;
+
+  u.f = val;
+  return cnbt__write_int(ctx, u.i);
+}
+
+cnbt_Status cnbt__write_double(cnbt__WriteCtx* ctx, f64 val) {
+  union {
+    i64 i;
+    f64 d;
+  } u;
+
+  u.d = val;
+  return cnbt__write_long(ctx, u.i);
+}
+
+cnbt_Status cnbt__write_string(cnbt__WriteCtx* ctx, const char* str, size_t len) {
+  cnbt_Status ret = cnbt__write_short(ctx, (i16)len);
+  if (ret != CNBT_OK) {
+    return ret;
+  }
+  if (len > 0) {
+    ret = cnbt__write_bytes(ctx, str, len);
+  }
+  return ret;
+}
+
+static cnbt_Status write_data(cnbt__WriteCtx* ctx, const cnbt_Tag* tag) {
+  if (!tag) {
+    return CNBT_INVALID_DATA;
+  }
+  switch (tag->type) {
+    case CNBT_TYPE_END:
+      return CNBT_OK;
+    case CNBT_TYPE_BYTE:
+      return cnbt__write_byte(ctx, tag->as_i8);
+    case CNBT_TYPE_SHORT:
+      return cnbt__write_short(ctx, tag->as_i16);
+    case CNBT_TYPE_INT:
+      return cnbt__write_int(ctx, tag->as_i32);
+    case CNBT_TYPE_LONG:
+      return cnbt__write_long(ctx, tag->as_i64);
+    case CNBT_TYPE_FLOAT:
+      return cnbt__write_float(ctx, tag->as_f32);
+    case CNBT_TYPE_DOUBLE:
+      return cnbt__write_double(ctx, tag->as_f64);
+    case CNBT_TYPE_BYTE_ARRAY:
+      return cnbt__write_byte_array(ctx, &tag->as_bytearr);
+    case CNBT_TYPE_STRING:
+      return cnbt__write_string(ctx, tag->as_string.data, tag->as_string.size);
+    case CNBT_TYPE_LIST:
+      return cnbt__write_list(ctx, &tag->as_list);
+    case CNBT_TYPE_COMPOUND:
+      return cnbt__write_compound(ctx, &tag->as_compound);
+    case CNBT_TYPE_INT_ARRAY:
+      return cnbt__write_int_array(ctx, &tag->as_intarr);
+    case CNBT_TYPE_LONG_ARRAY:
+      return cnbt__write_long_array(ctx, &tag->as_longarr);
+    default:
+      return CNBT_INVALID_DATA;
+  }
+}
+
+cnbt_Status cnbt__write_byte_array(cnbt__WriteCtx* ctx, const cnbt__ByteArrayData* arr) {
+  cnbt_Status ret = cnbt__write_int(ctx, (i32)arr->size);
+  if (ret != CNBT_OK) {
+    return ret;
+  }
+  if (arr->size > 0 && arr->data) {
+    ret = cnbt__write_bytes(ctx, arr->data, arr->size);
+  }
+  return ret;
+}
+
+cnbt_Status cnbt__write_int_array(cnbt__WriteCtx* ctx, const cnbt__IntArrayData* arr) {
+  cnbt_Status ret = cnbt__write_int(ctx, (i32)arr->size);
+  if (ret != CNBT_OK) {
+    return ret;
+  }
+  for (u32 i = 0; i < arr->size; ++i) {
+    ret = cnbt__write_int(ctx, arr->data[i]);
+    if (ret != CNBT_OK) {
+      return ret;
+    }
+  }
+  return CNBT_OK;
+}
+
+cnbt_Status cnbt__write_long_array(cnbt__WriteCtx* ctx, const cnbt__LongArrayData* arr) {
+  cnbt_Status ret = cnbt__write_int(ctx, (i32)arr->size);
+  if (ret != CNBT_OK) {
+    return ret;
+  }
+  for (u32 i = 0; i < arr->size; ++i) {
+    ret = cnbt__write_long(ctx, arr->data[i]);
+    if (ret != CNBT_OK) {
+      return ret;
+    }
+  }
+  return CNBT_OK;
+}
+
+cnbt_Status cnbt__write_list(cnbt__WriteCtx* ctx, const cnbt__ListData* list) {
+  size_t len = stbds_arrlenu(list->data);
+  cnbt_Type elem_type = CNBT_TYPE_BYTE;
+  if (len > 0) {
+    elem_type = (cnbt_Type)list->data[0].type;
+  } else {
+    elem_type = CNBT_TYPE_END;
+  }
+  cnbt_Status ret = cnbt__write_type(ctx, elem_type);
+  if (ret != CNBT_OK) {
+    return ret;
+  }
+  ret = cnbt__write_int(ctx, (i32)len);
+  if (ret != CNBT_OK) {
+    return ret;
+  }
+  for (size_t i = 0; i < len; ++i) {
+    ret = write_data(ctx, &list->data[i]);
+    if (ret != CNBT_OK)
+      return ret;
+  }
+  return CNBT_OK;
+}
+
+cnbt_Status cnbt__write_compound(cnbt__WriteCtx* ctx, const cnbt__CompoundData* comp) {
+  size_t len = stbds_shlenu(comp->data);
+  for (size_t i = 0; i < len; ++i) {
+    const cnbt_KeyTag* kt = &comp->data[i];
+    cnbt_Status ret = cnbt__write_type(ctx, (cnbt_Type)kt->value.type);
+    if (ret != CNBT_OK) {
+      return ret;
+    }
+    ret = cnbt__write_string(ctx, kt->key, strlen(kt->key));
+    if (ret != CNBT_OK) {
+      return ret;
+    }
+    ret = write_data(ctx, &kt->value);
+    if (ret != CNBT_OK) {
+      return ret;
+    }
+  }
+  return cnbt__write_type(ctx, CNBT_TYPE_END);
+}
+
 CNBT_API cnbt_Status cnbt_write(const cnbt_Tag* tag, cnbt_EndianMode mode, void* src,
                                 const cnbt_IoFunc* cbs) {
-  // TODO
-  return CNBT_OK;
+  if (!tag || !cbs || !cbs->write) {
+    return CNBT_INVALID_DATA;
+  }
+  cnbt__WriteCtx ctx;
+  ctx.src = src;
+  ctx.cbs = *cbs;
+  ctx.endian_mode = mode;
+
+  cnbt_Status ret = cnbt__write_type(&ctx, (cnbt_Type)tag->type);
+  if (ret != CNBT_OK) {
+    return ret;
+  }
+  if (tag->type == CNBT_TYPE_END) {
+    return CNBT_OK;
+  }
+
+  ret = cnbt__write_string(&ctx, "", 0); // empty root name
+  if (ret != CNBT_OK) {
+    return ret;
+  }
+
+  return write_data(&ctx, tag);
 }

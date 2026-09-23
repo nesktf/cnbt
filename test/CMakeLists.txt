@@ -12,13 +12,17 @@ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -O3")
 set(TESTFILES "${CMAKE_CURRENT_SOURCE_DIR}/files")
 file(GLOB CNBT_TEST_SRC "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 
-message(STATUS "cnbt: Fetching munit contents...")
-FetchContent_Declare(
-  munit
-  GIT_REPOSITORY https://github.com/nemequ/munit.git
-  GIT_TAG fbbdf14
-)
-FetchContent_MakeAvailable(munit)
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/munit/munit.c")
+  set(munit_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/munit")
+else()
+  message(STATUS "cnbt: Fetching munit contents...")
+  FetchContent_Declare(
+    munit
+    GIT_REPOSITORY https://github.com/nemequ/munit.git
+    GIT_TAG fbbdf14
+  )
+  FetchContent_MakeAvailable(munit)
+endif()
 
 add_executable(${PROJECT_NAME} ${CNBT_TEST_SRC} ${munit_SOURCE_DIR}/munit.c)
 target_include_directories(${PROJECT_NAME}

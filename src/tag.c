@@ -10,10 +10,11 @@
 #include "stb_ds.h"
 
 CNBT_API const char* cnbt_tag_name(cnbt_Type type) {
-  static const char* names[] = {"TAG_End",    "TAG_Byte",  "TAG_Short",   "TAG_Int",
-                                "TAG_Long",   "TAG_Float", "TAG_Double",  "TAG_Byte_Array",
-                                "TAG_String", "TAG_List",  "TAG_Compound"};
-  return type > ARRSZ(names) ? "UNKNOWN" : names[type];
+  static const char* names[] = {"TAG_End",       "TAG_Byte",  "TAG_Short",    "TAG_Int",
+                                "TAG_Long",      "TAG_Float", "TAG_Double",   "TAG_Byte_Array",
+                                "TAG_String",    "TAG_List",  "TAG_Compound", "TAG_Int_Array",
+                                "TAG_Long_Array"};
+  return type >= ARRSZ(names) ? "UNKNOWN" : names[type];
 }
 
 CNBT_API cnbt_Type cnbt_get_type(const cnbt_Tag* tag) {
@@ -37,6 +38,12 @@ CNBT_API void cnbt_free(cnbt_Tag* tag) {
       break;
     case CNBT_TYPE_BYTE_ARRAY:
       cnbt__free_byte_array(&tag->as_bytearr);
+      break;
+    case CNBT_TYPE_INT_ARRAY:
+      cnbt__free_int_array(&tag->as_intarr);
+      break;
+    case CNBT_TYPE_LONG_ARRAY:
+      cnbt__free_long_array(&tag->as_longarr);
       break;
     default:
       break;
@@ -194,6 +201,81 @@ CNBT_API int8_t* cnbt_byte_array_data(const cnbt_ByteArray* arr) {
   return arr ? arr->type == CNBT_TYPE_BYTE_ARRAY ? arr->as_bytearr.data : NULL : NULL;
 }
 
+void cnbt__free_byte_array(cnbt__ByteArrayData* arr) {
+  if (!arr) {
+    return;
+  }
+  CNBT_FREE(arr->data);
+}
+
+CNBT_API cnbt_Status cnbt_make_int_array(cnbt_IntArray* arr, const int32_t* data, size_t n) {
+  if (!arr || (!data && n > 0) || n > CNBT_MAX_LIST_SIZE) {
+    return CNBT_INVALID_DATA;
+  }
+  int32_t* blob = NULL;
+  if (n > 0) {
+    blob = CNBT_MALLOC(n * sizeof(int32_t));
+    if (!blob) {
+      return CNBT_ALLOC_FAILED;
+    }
+    memcpy(blob, data, n * sizeof(int32_t));
+  }
+  memset(arr, 0x00, sizeof(*arr));
+  arr->type = CNBT_TYPE_INT_ARRAY;
+  arr->as_intarr.data = blob;
+  arr->as_intarr.size = (uint32_t)n;
+  return CNBT_OK;
+}
+
+CNBT_API size_t cnbt_int_array_len(const cnbt_IntArray* arr) {
+  return arr ? arr->type == CNBT_TYPE_INT_ARRAY ? arr->as_intarr.size : 0 : 0;
+}
+
+CNBT_API int32_t* cnbt_int_array_data(const cnbt_IntArray* arr) {
+  return arr ? arr->type == CNBT_TYPE_INT_ARRAY ? arr->as_intarr.data : NULL : NULL;
+}
+
+void cnbt__free_int_array(cnbt__IntArrayData* arr) {
+  if (!arr) {
+    return;
+  }
+  CNBT_FREE(arr->data);
+}
+
+CNBT_API cnbt_Status cnbt_make_long_array(cnbt_LongArray* arr, const int64_t* data, size_t n) {
+  if (!arr || (!data && n > 0) || n > CNBT_MAX_LIST_SIZE) {
+    return CNBT_INVALID_DATA;
+  }
+  int64_t* blob = NULL;
+  if (n > 0) {
+    blob = CNBT_MALLOC(n * sizeof(int64_t));
+    if (!blob) {
+      return CNBT_ALLOC_FAILED;
+    }
+    memcpy(blob, data, n * sizeof(int64_t));
+  }
+  memset(arr, 0x00, sizeof(*arr));
+  arr->type = CNBT_TYPE_LONG_ARRAY;
+  arr->as_longarr.data = blob;
+  arr->as_longarr.size = (uint32_t)n;
+  return CNBT_OK;
+}
+
+CNBT_API size_t cnbt_long_array_len(const cnbt_LongArray* arr) {
+  return arr ? arr->type == CNBT_TYPE_LONG_ARRAY ? arr->as_longarr.size : 0 : 0;
+}
+
+CNBT_API int64_t* cnbt_long_array_data(const cnbt_LongArray* arr) {
+  return arr ? arr->type == CNBT_TYPE_LONG_ARRAY ? arr->as_longarr.data : NULL : NULL;
+}
+
+void cnbt__free_long_array(cnbt__LongArrayData* arr) {
+  if (!arr) {
+    return;
+  }
+  CNBT_FREE(arr->data);
+}
+
 CNBT_API cnbt_Status cnbt_make_list(cnbt_List* list) {
   if (!list) {
     return CNBT_INVALID_DATA;
@@ -213,13 +295,6 @@ void cnbt__free_list(cnbt__ListData* list) {
     }
   }
   stbds_arrfree(list->data);
-}
-
-void cnbt__free_byte_array(cnbt__ByteArrayData* arr) {
-  if (!arr) {
-    return;
-  }
-  CNBT_FREE(arr->data);
 }
 
 CNBT_API cnbt_Tag* cnbt_list_push(cnbt_List* list, cnbt_Tag tag) {
@@ -272,6 +347,7 @@ CNBT_API cnbt_Status cnbt_make_compound(cnbt_Compound* comp) {
   }
   memset(comp, 0x00, sizeof(*comp));
   comp->type = CNBT_TYPE_COMPOUND;
+  stbds_sh_new_strdup(comp->as_compound.data);
   return CNBT_OK;
 }
 
@@ -293,6 +369,15 @@ CNBT_API cnbt_KeyTag* cnbt_comp_insert(cnbt_Compound* comp, const char* key, cnb
   }
   if (comp->type != CNBT_TYPE_COMPOUND) {
     return NULL;
+  }
+  if (!comp->as_compound.data) {
+    stbds_sh_new_strdup(comp->as_compound.data);
+  }
+  cnbt_KeyTag* old = shgetp_null(comp->as_compound.data, key);
+  if (old) {
+    if (!old->value.is_view) {
+      cnbt_free(&old->value);
+    }
   }
   stbds_shput(comp->as_compound.data, key, tag);
   return shgetp_null(comp->as_compound.data, key);
@@ -322,4 +407,89 @@ CNBT_API cnbt_KeyTag* cnbt_comp_get(cnbt_Compound* comp, const char* key) {
 
 CNBT_API cnbt_KeyTag* cnbt_comp_data(cnbt_Compound* comp) {
   return comp ? comp->as_compound.data : NULL;
+}
+
+CNBT_API cnbt_Status cnbt_clone(cnbt_Tag* dst, const cnbt_Tag* src) {
+  if (!dst || !src) {
+    return CNBT_INVALID_DATA;
+  }
+  memset(dst, 0x00, sizeof(*dst));
+  dst->type = src->type;
+  dst->is_view = 0;
+  switch (src->type) {
+    case CNBT_TYPE_END: {
+      return CNBT_OK;
+    }
+    case CNBT_TYPE_BYTE: {
+      dst->as_i8 = src->as_i8;
+      return CNBT_OK;
+    }
+    case CNBT_TYPE_SHORT: {
+      dst->as_i16 = src->as_i16;
+      return CNBT_OK;
+    }
+    case CNBT_TYPE_INT: {
+      dst->as_i32 = src->as_i32;
+      return CNBT_OK;
+    }
+    case CNBT_TYPE_LONG: {
+      dst->as_i64 = src->as_i64;
+      return CNBT_OK;
+    }
+    case CNBT_TYPE_FLOAT: {
+      dst->as_f32 = src->as_f32;
+      return CNBT_OK;
+    }
+    case CNBT_TYPE_DOUBLE: {
+      dst->as_f64 = src->as_f64;
+      return CNBT_OK;
+    }
+    case CNBT_TYPE_BYTE_ARRAY: {
+      return cnbt_make_byte_array(dst, src->as_bytearr.data, src->as_bytearr.size);
+    }
+    case CNBT_TYPE_STRING: {
+      return cnbt_make_strn(dst, src->as_string.data, src->as_string.size);
+    }
+    case CNBT_TYPE_INT_ARRAY: {
+      return cnbt_make_int_array(dst, src->as_intarr.data, src->as_intarr.size);
+    }
+    case CNBT_TYPE_LONG_ARRAY: {
+      return cnbt_make_long_array(dst, src->as_longarr.data, src->as_longarr.size);
+    }
+    case CNBT_TYPE_LIST: {
+      cnbt_Status st = cnbt_make_list(dst);
+      if (st != CNBT_OK)
+        return st;
+      size_t len = cnbt_list_len(src);
+      for (size_t i = 0; i < len; ++i) {
+        cnbt_Tag child;
+        st = cnbt_clone(&child, cnbt_list_get_unchecked(src, i));
+        if (st != CNBT_OK) {
+          cnbt_free(dst);
+          return st;
+        }
+        cnbt_list_push(dst, child);
+      }
+      return CNBT_OK;
+    }
+    case CNBT_TYPE_COMPOUND: {
+      cnbt_Status st = cnbt_make_compound(dst);
+      if (st != CNBT_OK)
+        return st;
+      size_t len = cnbt_comp_len(src);
+      const cnbt_KeyTag* kts = src->as_compound.data;
+      for (size_t i = 0; i < len; ++i) {
+        cnbt_Tag child;
+        st = cnbt_clone(&child, &kts[i].value);
+        if (st != CNBT_OK) {
+          cnbt_free(dst);
+          return st;
+        }
+        cnbt_comp_insert(dst, kts[i].key, child);
+      }
+      return CNBT_OK;
+    }
+    default:
+      return CNBT_INVALID_DATA;
+  }
 }

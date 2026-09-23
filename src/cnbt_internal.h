@@ -47,6 +47,16 @@ typedef struct cnbt__CompoundData {
   u32 size;
 } cnbt__CompoundData;
 
+typedef struct cnbt__IntArrayData {
+  i32* data;
+  u32 size;
+} cnbt__IntArrayData;
+
+typedef struct cnbt__LongArrayData {
+  i64* data;
+  u32 size;
+} cnbt__LongArrayData;
+
 struct cnbt_Tag {
   u32 type;
   int is_view;
@@ -62,6 +72,8 @@ struct cnbt_Tag {
     cnbt__ByteArrayData as_bytearr;
     cnbt__ListData as_list;
     cnbt__CompoundData as_compound;
+    cnbt__IntArrayData as_intarr;
+    cnbt__LongArrayData as_longarr;
   };
 };
 
@@ -77,6 +89,8 @@ typedef struct cnbt__ReadCtx {
 } cnbt__ReadCtx;
 
 void cnbt__free_byte_array(cnbt__ByteArrayData* arr);
+void cnbt__free_int_array(cnbt__IntArrayData* arr);
+void cnbt__free_long_array(cnbt__LongArrayData* arr);
 void cnbt__free_string(cnbt__StringData* str);
 void cnbt__free_list(cnbt__ListData* list);
 void cnbt__free_compound(cnbt__CompoundData* comp);
@@ -90,7 +104,29 @@ cnbt_Status cnbt__read_float(cnbt__ReadCtx* ctx, f32* num);
 cnbt_Status cnbt__read_double(cnbt__ReadCtx* ctx, f64* num);
 cnbt_Status cnbt__read_string(cnbt__ReadCtx* ctx, cnbt__StringData* str);
 cnbt_Status cnbt__read_byte_array(cnbt__ReadCtx* ctx, cnbt__ByteArrayData* arr);
+cnbt_Status cnbt__read_int_array(cnbt__ReadCtx* ctx, cnbt__IntArrayData* arr);
+cnbt_Status cnbt__read_long_array(cnbt__ReadCtx* ctx, cnbt__LongArrayData* arr);
 cnbt_Status cnbt__read_list(cnbt__ReadCtx* ctx, cnbt__ListData* list);
 cnbt_Status cnbt__read_compound(cnbt__ReadCtx* ctx, cnbt__CompoundData* comp);
+
+typedef struct cnbt__WriteCtx {
+  cnbt_IoFunc cbs;
+  void* src;
+  cnbt_EndianMode endian_mode;
+} cnbt__WriteCtx;
+
+cnbt_Status cnbt__write_type(cnbt__WriteCtx* ctx, cnbt_Type type);
+cnbt_Status cnbt__write_byte(cnbt__WriteCtx* ctx, i8 val);
+cnbt_Status cnbt__write_short(cnbt__WriteCtx* ctx, i16 val);
+cnbt_Status cnbt__write_int(cnbt__WriteCtx* ctx, i32 val);
+cnbt_Status cnbt__write_long(cnbt__WriteCtx* ctx, i64 val);
+cnbt_Status cnbt__write_float(cnbt__WriteCtx* ctx, f32 val);
+cnbt_Status cnbt__write_double(cnbt__WriteCtx* ctx, f64 val);
+cnbt_Status cnbt__write_string(cnbt__WriteCtx* ctx, const char* str, size_t len);
+cnbt_Status cnbt__write_byte_array(cnbt__WriteCtx* ctx, const cnbt__ByteArrayData* arr);
+cnbt_Status cnbt__write_int_array(cnbt__WriteCtx* ctx, const cnbt__IntArrayData* arr);
+cnbt_Status cnbt__write_long_array(cnbt__WriteCtx* ctx, const cnbt__LongArrayData* arr);
+cnbt_Status cnbt__write_list(cnbt__WriteCtx* ctx, const cnbt__ListData* list);
+cnbt_Status cnbt__write_compound(cnbt__WriteCtx* ctx, const cnbt__CompoundData* comp);
 
 #endif // CNBT_INTERNAL_H
