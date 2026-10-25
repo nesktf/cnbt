@@ -155,7 +155,7 @@ CNBT_API cnbt_Status cnbt_make_str(cnbt_String* tag, const char* str) {
 }
 
 CNBT_API cnbt_Status cnbt_make_strn(cnbt_String* tag, const char* str, size_t n) {
-  if (!str || !tag || !n) {
+  if (!str || !tag) {
     return CNBT_INVALID_DATA;
   }
   return cnbt__init_str(tag, str, n);
