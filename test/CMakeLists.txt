@@ -33,3 +33,13 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} PRIVATE cnbt)
 target_compile_definitions(${PROJECT_NAME} PRIVATE -DTESTFILES=\"${TESTFILES}\")
 enable_testing()
+add_test(NAME ${PROJECT_NAME} COMMAND ${PROJECT_NAME})
+
+enable_language(CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_executable(cnbt_cpp_test cpp_test.cpp)
+target_link_libraries(cnbt_cpp_test PRIVATE cnbt)
+target_compile_definitions(cnbt_cpp_test PRIVATE -DTESTFILES=\"${TESTFILES}\")
+add_test(NAME cnbt_cpp_test COMMAND cnbt_cpp_test)
+
